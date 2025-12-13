@@ -29,21 +29,6 @@ Globals:
         BETS_TABLE_NAME: !Ref BetsTableName
         AWS_REGION: !Ref AWS::Region
         COGNITO_USER_POOL_ID: !Ref UserPoolId
-    Policies:
-      - Version: '2012-10-17'
-        Statement:
-          - Effect: Allow
-            Action:
-              - dynamodb:PutItem
-              - dynamodb:GetItem
-              - dynamodb:UpdateItem
-              - dynamodb:DeleteItem
-              - dynamodb:Query
-              - dynamodb:Scan
-            Resource:
-              - !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${BetsTableName}'
-              - !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${BetsTableName}/index/*'
-      - AWSLambdaBasicExecutionRole
 
 Resources:
   GetBetsFunction:
@@ -52,6 +37,21 @@ Resources:
       FunctionName: !Sub '${ProjectName}-${Environment}-get-bets'
       CodeUri: backend/lambdas/get_bets/
       Handler: lambda_function.lambda_handler
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:PutItem
+                - dynamodb:GetItem
+                - dynamodb:UpdateItem
+                - dynamodb:DeleteItem
+                - dynamodb:Query
+                - dynamodb:Scan
+              Resource:
+                - !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${BetsTableName}'
+                - !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${BetsTableName}/index/*'
 
   CreateBetFunction:
     Type: AWS::Serverless::Function
@@ -59,6 +59,21 @@ Resources:
       FunctionName: !Sub '${ProjectName}-${Environment}-create-bet'
       CodeUri: backend/lambdas/create_bet/
       Handler: lambda_function.lambda_handler
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:PutItem
+                - dynamodb:GetItem
+                - dynamodb:UpdateItem
+                - dynamodb:DeleteItem
+                - dynamodb:Query
+                - dynamodb:Scan
+              Resource:
+                - !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${BetsTableName}'
+                - !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${BetsTableName}/index/*'
 
   UpdateBetFunction:
     Type: AWS::Serverless::Function
@@ -66,6 +81,21 @@ Resources:
       FunctionName: !Sub '${ProjectName}-${Environment}-update-bet'
       CodeUri: backend/lambdas/update_bet/
       Handler: lambda_function.lambda_handler
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:PutItem
+                - dynamodb:GetItem
+                - dynamodb:UpdateItem
+                - dynamodb:DeleteItem
+                - dynamodb:Query
+                - dynamodb:Scan
+              Resource:
+                - !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${BetsTableName}'
+                - !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${BetsTableName}/index/*'
 
   DeleteBetFunction:
     Type: AWS::Serverless::Function
@@ -73,6 +103,21 @@ Resources:
       FunctionName: !Sub '${ProjectName}-${Environment}-delete-bet'
       CodeUri: backend/lambdas/delete_bet/
       Handler: lambda_function.lambda_handler
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:PutItem
+                - dynamodb:GetItem
+                - dynamodb:UpdateItem
+                - dynamodb:DeleteItem
+                - dynamodb:Query
+                - dynamodb:Scan
+              Resource:
+                - !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${BetsTableName}'
+                - !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${BetsTableName}/index/*'
 
   ClearWeekFunction:
     Type: AWS::Serverless::Function
@@ -80,6 +125,21 @@ Resources:
       FunctionName: !Sub '${ProjectName}-${Environment}-clear-week'
       CodeUri: backend/lambdas/clear_week/
       Handler: lambda_function.lambda_handler
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:PutItem
+                - dynamodb:GetItem
+                - dynamodb:UpdateItem
+                - dynamodb:DeleteItem
+                - dynamodb:Query
+                - dynamodb:Scan
+              Resource:
+                - !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${BetsTableName}'
+                - !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${BetsTableName}/index/*'
 
 Outputs:
   GetBetsFunctionArn:
