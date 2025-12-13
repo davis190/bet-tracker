@@ -23,26 +23,30 @@ phases:
       - echo "Building Lambda functions..."
       - mkdir -p dist
       - |
+        shopt -s nullglob
         for lambda_dir in backend/lambdas/*/; do
-          lambda_name=$(basename $lambda_dir)
+          [ -d "$lambda_dir" ] || continue
+          lambda_name=$(basename "$lambda_dir")
           echo "Packaging $lambda_name..."
           # Create temporary directory for packaging
           mkdir -p /tmp/${lambda_name}
           # Copy Lambda function code (excluding __pycache__)
-          find ${lambda_dir} -type f -name "*.py" ! -path "*/__pycache__/*" -exec cp {} /tmp/${lambda_name}/ \;
+          find "$lambda_dir" -type f -name "*.py" ! -path "*/__pycache__/*" -exec cp {} /tmp/${lambda_name}/ \;
           # Copy shared directory to root of package
           mkdir -p /tmp/${lambda_name}/shared
-          cp -r backend/shared/*.py /tmp/${lambda_name}/shared/
+          if [ -d backend/shared ]; then
+            find backend/shared -type f -name "*.py" -exec cp {} /tmp/${lambda_name}/shared/ \;
+          fi
           # Create zip
           cd /tmp/${lambda_name}
-          zip -r ../../dist/${lambda_name}.zip . -x "*.pyc" -x "__pycache__/*" -x "*.git*" -x "requirements.txt"
-          cd ../../..
+          zip -r ${CODEBUILD_SRC_DIR}/dist/${lambda_name}.zip . -x "*.pyc" -x "__pycache__/*" -x "*.git*" -x "requirements.txt"
+          cd ${CODEBUILD_SRC_DIR}
           rm -rf /tmp/${lambda_name}
         done
       - echo "Building frontend..."
-      - cd frontend
+      - cd ${CODEBUILD_SRC_DIR}/frontend
       - npm run build
-      - cd ..
+      - cd ${CODEBUILD_SRC_DIR}
 
   post_build:
     commands:
