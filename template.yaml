@@ -1,0 +1,114 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: 'Bet Tracker App Lambda Functions'
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues: [dev, staging, prod]
+  
+  ProjectName:
+    Type: String
+    Default: bet-tracker
+  
+  BetsTableName:
+    Type: String
+    Description: DynamoDB Bets Table Name
+  
+  UserPoolId:
+    Type: String
+    Description: Cognito User Pool ID
+
+Globals:
+  Function:
+    Runtime: python3.11
+    Timeout: 30
+    Environment:
+      Variables:
+        BETS_TABLE_NAME: !Ref BetsTableName
+        AWS_REGION: !Ref AWS::Region
+        COGNITO_USER_POOL_ID: !Ref UserPoolId
+    Policies:
+      - Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action:
+              - dynamodb:PutItem
+              - dynamodb:GetItem
+              - dynamodb:UpdateItem
+              - dynamodb:DeleteItem
+              - dynamodb:Query
+              - dynamodb:Scan
+            Resource:
+              - !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${BetsTableName}'
+              - !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${BetsTableName}/index/*'
+      - AWSLambdaBasicExecutionRole
+
+Resources:
+  GetBetsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub '${ProjectName}-${Environment}-get-bets'
+      CodeUri: backend/lambdas/get_bets/
+      Handler: lambda_function.lambda_handler
+
+  CreateBetFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub '${ProjectName}-${Environment}-create-bet'
+      CodeUri: backend/lambdas/create_bet/
+      Handler: lambda_function.lambda_handler
+
+  UpdateBetFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub '${ProjectName}-${Environment}-update-bet'
+      CodeUri: backend/lambdas/update_bet/
+      Handler: lambda_function.lambda_handler
+
+  DeleteBetFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub '${ProjectName}-${Environment}-delete-bet'
+      CodeUri: backend/lambdas/delete_bet/
+      Handler: lambda_function.lambda_handler
+
+  ClearWeekFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub '${ProjectName}-${Environment}-clear-week'
+      CodeUri: backend/lambdas/clear_week/
+      Handler: lambda_function.lambda_handler
+
+Outputs:
+  GetBetsFunctionArn:
+    Description: Get Bets Lambda Function ARN
+    Value: !GetAtt GetBetsFunction.Arn
+    Export:
+      Name: !Sub '${ProjectName}-${Environment}-get-bets-arn'
+
+  CreateBetFunctionArn:
+    Description: Create Bet Lambda Function ARN
+    Value: !GetAtt CreateBetFunction.Arn
+    Export:
+      Name: !Sub '${ProjectName}-${Environment}-create-bet-arn'
+
+  UpdateBetFunctionArn:
+    Description: Update Bet Lambda Function ARN
+    Value: !GetAtt UpdateBetFunction.Arn
+    Export:
+      Name: !Sub '${ProjectName}-${Environment}-update-bet-arn'
+
+  DeleteBetFunctionArn:
+    Description: Delete Bet Lambda Function ARN
+    Value: !GetAtt DeleteBetFunction.Arn
+    Export:
+      Name: !Sub '${ProjectName}-${Environment}-delete-bet-arn'
+
+  ClearWeekFunctionArn:
+    Description: Clear Week Lambda Function ARN
+    Value: !GetAtt ClearWeekFunction.Arn
+    Export:
+      Name: !Sub '${ProjectName}-${Environment}-clear-week-arn'
+
