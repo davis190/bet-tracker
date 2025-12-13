@@ -74,9 +74,27 @@ phases:
       - echo "Deploying frontend to S3..."
       - aws s3 sync ${CODEBUILD_SRC_DIR}/frontend/dist s3://$FRONTEND_BUCKET --delete
       - echo "Invalidating CloudFront cache..."
-      - aws cloudfront create-invalidation \
-          --distribution-id $CLOUDFRONT_DISTRIBUTION_ID \
-          --paths "/*"
+      - |
+        # Check if CLOUDFRONT_DISTRIBUTION_ID is set, if not try to get it from CloudFormation
+        if [ -z "$CLOUDFRONT_DISTRIBUTION_ID" ]; then
+          echo "CLOUDFRONT_DISTRIBUTION_ID not set, attempting to fetch from CloudFormation stack..."
+          CLOUDFRONT_DISTRIBUTION_ID=$(aws cloudformation describe-stacks \
+            --stack-name ${PROJECT_NAME}-${ENVIRONMENT}-frontend \
+            --query 'Stacks[0].Outputs[?OutputKey==`CloudFrontDistributionId`].OutputValue' \
+            --output text \
+            --region $AWS_REGION 2>/dev/null || echo "")
+        fi
+        if [ -z "$CLOUDFRONT_DISTRIBUTION_ID" ]; then
+          echo "WARNING: CloudFront Distribution ID not found. Skipping cache invalidation."
+          echo "Frontend has been deployed to S3, but CloudFront cache will not be invalidated."
+          echo "You may need to manually invalidate the cache or wait for it to expire."
+        else
+          echo "Invalidating CloudFront cache for distribution: $CLOUDFRONT_DISTRIBUTION_ID"
+          aws cloudfront create-invalidation \
+            --distribution-id $CLOUDFRONT_DISTRIBUTION_ID \
+            --paths "/*" \
+            --region $AWS_REGION
+        fi
 
 artifacts:
   files:
