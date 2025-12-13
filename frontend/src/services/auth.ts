@@ -1,4 +1,4 @@
-import { CognitoUser, CognitoUserPool, AuthenticationDetails } from 'amazon-cognito-identity-js';
+import { CognitoUser, CognitoUserPool, AuthenticationDetails, CognitoUserSession, ICognitoUserAttribute } from 'amazon-cognito-identity-js';
 import { config } from './config';
 
 const poolData = {
@@ -14,8 +14,14 @@ export interface AuthUser {
   sub: string;
 }
 
+interface AuthTokens {
+  idToken: string;
+  accessToken: string;
+  refreshToken: string;
+}
+
 export const authService = {
-  async login(email: string, password: string): Promise<{ user: AuthUser; tokens: any }> {
+  async login(email: string, password: string): Promise<{ user: AuthUser; tokens: AuthTokens }> {
     return new Promise((resolve, reject) => {
       const authenticationDetails = new AuthenticationDetails({
         Username: email,
@@ -28,15 +34,15 @@ export const authService = {
       });
 
       cognitoUser.authenticateUser(authenticationDetails, {
-        onSuccess: (result) => {
+        onSuccess: (result: CognitoUserSession) => {
           const idToken = result.getIdToken();
           const payload = idToken.getPayload();
           
           resolve({
             user: {
-              username: payload['cognito:username'] || email,
-              email: payload.email || email,
-              sub: payload.sub,
+              username: payload['cognito:username'] as string || email,
+              email: (payload.email as string) || email,
+              sub: payload.sub as string,
             },
             tokens: {
               idToken: result.getIdToken().getJwtToken(),
@@ -45,7 +51,7 @@ export const authService = {
             },
           });
         },
-        onFailure: (err) => {
+        onFailure: (err: Error) => {
           reject(err);
         },
       });
@@ -68,20 +74,20 @@ export const authService = {
         return;
       }
 
-      cognitoUser.getSession((err: Error | null, session: any) => {
-        if (err || !session.isValid()) {
+      cognitoUser.getSession((err: Error | null, session: CognitoUserSession | null) => {
+        if (err || !session || !session.isValid()) {
           resolve(null);
           return;
         }
 
-        cognitoUser.getUserAttributes((err, attributes) => {
+        cognitoUser.getUserAttributes((err: Error | null, attributes: ICognitoUserAttribute[] | null) => {
           if (err) {
             reject(err);
             return;
           }
 
-          const email = attributes?.find(attr => attr.Name === 'email')?.Value || '';
-          const sub = session.getIdToken().payload.sub;
+          const email = attributes?.find((attr: ICognitoUserAttribute) => attr.Name === 'email')?.Value || '';
+          const sub = session.getIdToken().getPayload().sub as string;
 
           resolve({
             username: cognitoUser.getUsername(),
@@ -102,8 +108,8 @@ export const authService = {
         return;
       }
 
-      cognitoUser.getSession((err: Error | null, session: any) => {
-        if (err || !session.isValid()) {
+      cognitoUser.getSession((err: Error | null, session: CognitoUserSession | null) => {
+        if (err || !session || !session.isValid()) {
           resolve(null);
           return;
         }
