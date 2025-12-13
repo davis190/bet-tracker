@@ -14,8 +14,9 @@ phases:
   pre_build:
     commands:
       - echo "Pre-build phase..."
-      - echo "Environment: $ENVIRONMENT"
-      - echo "Project: $PROJECT_NAME"
+      - export AWS_DEFAULT_REGION=$AWS_REGION
+      - echo "Environment - $ENVIRONMENT"
+      - echo "Project - $PROJECT_NAME"
 
   build:
     commands:
@@ -50,7 +51,7 @@ phases:
         for lambda_zip in dist/*.zip; do
           lambda_name=$(basename $lambda_zip .zip)
           function_name="${PROJECT_NAME}-${ENVIRONMENT}-${lambda_name}"
-          echo "Updating Lambda function: $function_name"
+          echo "Updating Lambda function -- $function_name"
           aws lambda update-function-code \
             --function-name $function_name \
             --zip-file fileb://$lambda_zip \
