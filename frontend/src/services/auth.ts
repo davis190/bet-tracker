@@ -1,4 +1,4 @@
-import { CognitoUser, CognitoUserPool, AuthenticationDetails, CognitoUserSession, ICognitoUserAttribute } from 'amazon-cognito-identity-js';
+import { CognitoUser, CognitoUserPool, AuthenticationDetails, CognitoUserSession, CognitoUserAttribute } from 'amazon-cognito-identity-js';
 import { config } from './config';
 
 const poolData = {
@@ -36,7 +36,7 @@ export const authService = {
       cognitoUser.authenticateUser(authenticationDetails, {
         onSuccess: (result: CognitoUserSession) => {
           const idToken = result.getIdToken();
-          const payload = idToken.getPayload();
+          const payload = idToken.payload;
           
           resolve({
             user: {
@@ -80,14 +80,14 @@ export const authService = {
           return;
         }
 
-        cognitoUser.getUserAttributes((err: Error | null, attributes: ICognitoUserAttribute[] | null) => {
+        cognitoUser.getUserAttributes((err: Error | undefined, attributes: CognitoUserAttribute[] | undefined) => {
           if (err) {
             reject(err);
             return;
           }
 
-          const email = attributes?.find((attr: ICognitoUserAttribute) => attr.Name === 'email')?.Value || '';
-          const sub = session.getIdToken().getPayload().sub as string;
+          const email = attributes?.find((attr: CognitoUserAttribute) => attr.Name === 'email')?.Value || '';
+          const sub = session.getIdToken().payload.sub as string;
 
           resolve({
             username: cognitoUser.getUsername(),
