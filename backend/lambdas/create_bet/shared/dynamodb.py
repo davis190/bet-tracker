@@ -274,6 +274,78 @@ def get_bets_by_week(user_id: str) -> List[Dict[str, Any]]:
     return get_bets_by_user(user_id, start_date=start_date, end_date=end_date)
 
 
+def get_all_bets(
+    status: Optional[str] = None,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    bet_type: Optional[str] = None,
+) -> List[Dict[str, Any]]:
+    """
+    Get all bets (public view) with optional filters.
+    
+    Args:
+        status: Optional status filter
+        start_date: Optional start date filter (YYYY-MM-DD)
+        end_date: Optional end date filter (YYYY-MM-DD)
+        bet_type: Optional bet type filter (single/parlay)
+    
+    Returns:
+        List of bet items
+    """
+    table = get_table()
+    
+    # Scan all bets
+    # Note: For production with large datasets, consider using a GSI or pagination
+    filter_expressions = [Attr("SK").begins_with("BET#")]
+    
+    if status:
+        filter_expressions.append(Attr("status").eq(status))
+    
+    if bet_type:
+        filter_expressions.append(Attr("type").eq(bet_type))
+    
+    # Combine filter expressions
+    if len(filter_expressions) > 1:
+        from functools import reduce
+        combined_filter = reduce(lambda x, y: x & y, filter_expressions)
+    else:
+        combined_filter = filter_expressions[0] if filter_expressions else None
+    
+    if combined_filter:
+        response = table.scan(FilterExpression=combined_filter)
+    else:
+        response = table.scan()
+    
+    bets = response.get("Items", [])
+    
+    # Handle pagination (DynamoDB scan returns max 1MB, may need pagination)
+    while "LastEvaluatedKey" in response:
+        if combined_filter:
+            response = table.scan(
+                FilterExpression=combined_filter,
+                ExclusiveStartKey=response["LastEvaluatedKey"]
+            )
+        else:
+            response = table.scan(ExclusiveStartKey=response["LastEvaluatedKey"])
+        bets.extend(response.get("Items", []))
+    
+    # Apply date filters (client-side since they're not indexed)
+    if start_date:
+        bets = [b for b in bets if b.get("date") >= start_date]
+    
+    if end_date:
+        bets = [b for b in bets if b.get("date") <= end_date]
+    
+    # Convert DynamoDB types to Python types and remove internal keys
+    for bet in bets:
+        bet.pop("PK", None)
+        bet.pop("SK", None)
+        bet.pop("GSI1PK", None)
+        bet.pop("GSI1SK", None)
+    
+    return bets
+
+
 def delete_bets_by_week(user_id: str) -> int:
     """
     Delete all bets for the current week.

@@ -20,6 +20,7 @@ export const BetForm: React.FC<BetFormProps> = ({ onSuccess }) => {
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [oddsInput, setOddsInput] = useState<string>('0');
 
   const calculatePayout = (amount: number, odds: number): number => {
     if (odds > 0) {
@@ -50,6 +51,7 @@ export const BetForm: React.FC<BetFormProps> = ({ onSuccess }) => {
         selection: '',
         odds: 0,
       });
+      setOddsInput('0');
     } catch (err: any) {
       setError(err.response?.data?.error?.message || 'Failed to create bet');
     } finally {
@@ -132,12 +134,35 @@ export const BetForm: React.FC<BetFormProps> = ({ onSuccess }) => {
             Odds
           </label>
           <input
-            type="number"
+            type="text"
+            inputMode="numeric"
             required
-            step="1"
             className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-            value={formData.odds}
-            onChange={(e) => setFormData({ ...formData, odds: parseFloat(e.target.value) })}
+            value={oddsInput}
+            onChange={(e) => {
+              const value = e.target.value;
+              // Allow empty, just minus sign, or valid number pattern
+              if (value === '' || value === '-' || /^-?\d*\.?\d*$/.test(value)) {
+                setOddsInput(value);
+                const parsed = parseFloat(value);
+                if (!isNaN(parsed) && value !== '' && value !== '-') {
+                  setFormData({ ...formData, odds: parsed });
+                } else if (value === '' || value === '-') {
+                  setFormData({ ...formData, odds: 0 });
+                }
+              }
+            }}
+            onBlur={() => {
+              // Ensure we have a valid number on blur
+              const parsed = parseFloat(oddsInput);
+              if (isNaN(parsed) || oddsInput === '' || oddsInput === '-') {
+                setOddsInput('0');
+                setFormData({ ...formData, odds: 0 });
+              } else {
+                setOddsInput(parsed.toString());
+                setFormData({ ...formData, odds: parsed });
+              }
+            }}
             placeholder="e.g., -110"
           />
         </div>

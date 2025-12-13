@@ -42,6 +42,7 @@ Resources:
       UserPoolId: !Ref UserPool
       GenerateSecret: false
       ExplicitAuthFlows:
+        - ALLOW_USER_SRP_AUTH
         - ALLOW_USER_PASSWORD_AUTH
         - ALLOW_REFRESH_TOKEN_AUTH
       PreventUserExistenceErrors: ENABLED
@@ -85,6 +86,25 @@ Resources:
       EndpointConfiguration:
         Types:
           - REGIONAL
+
+  # API Gateway Custom Domain
+  ApiGatewayDomainName:
+    Type: AWS::ApiGateway::DomainName
+    Properties:
+      DomainName: bets-api.claytondavis.dev
+      RegionalCertificateArn: arn:aws:acm:us-east-1:690641653089:certificate/353de965-0214-4570-a541-0b944ce658a6
+      EndpointConfiguration:
+        Types:
+          - REGIONAL
+      SecurityPolicy: TLS_1_2
+
+  # API Gateway Base Path Mapping
+  ApiGatewayBasePathMapping:
+    Type: AWS::ApiGateway::BasePathMapping
+    Properties:
+      DomainName: !Ref ApiGatewayDomainName
+      RestApiId: !Ref ApiGatewayRestApi
+      Stage: !Ref Environment
 
   # Cognito Authorizer
   CognitoAuthorizer:
@@ -152,4 +172,22 @@ Outputs:
     Value: !Ref SamArtifactsBucket
     Export:
       Name: !Sub '${ProjectName}-${Environment}-sam-artifacts-bucket'
+
+  ApiGatewayDomainName:
+    Description: API Gateway Custom Domain Name
+    Value: !Ref ApiGatewayDomainName
+    Export:
+      Name: !Sub '${ProjectName}-${Environment}-api-domain-name'
+
+  ApiGatewayDomainNameValue:
+    Description: API Gateway Custom Domain Name Value
+    Value: bets-api.claytondavis.dev
+    Export:
+      Name: !Sub '${ProjectName}-${Environment}-api-domain-value'
+
+  ApiGatewayRegionalDomainName:
+    Description: API Gateway Regional Domain Name (for DNS CNAME)
+    Value: !GetAtt ApiGatewayDomainName.RegionalDomainName
+    Export:
+      Name: !Sub '${ProjectName}-${Environment}-api-regional-domain'
 

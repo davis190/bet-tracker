@@ -28,6 +28,7 @@ export const ParlayForm: React.FC<ParlayFormProps> = ({ onSuccess }) => {
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [oddsInputs, setOddsInputs] = useState<string[]>(['0', '0']);
 
   const calculateParlayPayout = (amount: number, legs: Omit<BetLeg, 'id'>[]): number => {
     const decimalOdds = legs.map(leg => {
@@ -52,11 +53,15 @@ export const ParlayForm: React.FC<ParlayFormProps> = ({ onSuccess }) => {
       selection: '',
       odds: 0,
     }]);
+    setOddsInputs([...oddsInputs, '0']);
   };
 
   const removeLeg = (index: number) => {
     if (legs.length > 2) {
       setLegs(legs.filter((_, i) => i !== index));
+      setOddsInputs(oddsInputs.filter((_, i) => i !== index));
+    } else {
+      setError('Parlay must have at least 2 legs');
     }
   };
 
@@ -93,6 +98,7 @@ export const ParlayForm: React.FC<ParlayFormProps> = ({ onSuccess }) => {
         { sport: '', teams: '', betType: 'moneyline', selection: '', odds: 0 },
         { sport: '', teams: '', betType: 'moneyline', selection: '', odds: 0 },
       ]);
+      setOddsInputs(['0', '0']);
     } catch (err: any) {
       setError(err.response?.data?.error?.message || 'Failed to create parlay');
     } finally {
@@ -151,11 +157,16 @@ export const ParlayForm: React.FC<ParlayFormProps> = ({ onSuccess }) => {
 
       <div className="space-y-4">
         <div className="flex justify-between items-center">
-          <h4 className="text-md font-medium">Legs</h4>
+          <div>
+            <h4 className="text-md font-medium">Legs ({legs.length})</h4>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              Parlays require at least 2 legs. You can add unlimited legs.
+            </p>
+          </div>
           <button
             type="button"
             onClick={addLeg}
-            className="text-sm text-indigo-600 hover:text-indigo-700 dark:text-indigo-400"
+            className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
           >
             + Add Leg
           </button>
@@ -165,15 +176,19 @@ export const ParlayForm: React.FC<ParlayFormProps> = ({ onSuccess }) => {
           <div key={index} className="border rounded-lg p-4 space-y-4">
             <div className="flex justify-between items-center mb-2">
               <span className="font-medium">Leg {index + 1}</span>
-              {legs.length > 2 && (
-                <button
-                  type="button"
-                  onClick={() => removeLeg(index)}
-                  className="text-sm text-red-600 hover:text-red-700 dark:text-red-400"
-                >
-                  Remove
-                </button>
-              )}
+              <button
+                type="button"
+                onClick={() => removeLeg(index)}
+                disabled={legs.length <= 2}
+                className={`text-sm ${
+                  legs.length > 2
+                    ? 'text-red-600 hover:text-red-700 dark:text-red-400 cursor-pointer'
+                    : 'text-gray-400 dark:text-gray-600 cursor-not-allowed'
+                }`}
+                title={legs.length <= 2 ? 'Parlay must have at least 2 legs' : 'Remove this leg'}
+              >
+                Remove
+              </button>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -241,12 +256,42 @@ export const ParlayForm: React.FC<ParlayFormProps> = ({ onSuccess }) => {
                   Odds
                 </label>
                 <input
-                  type="number"
+                  type="text"
+                  inputMode="numeric"
                   required
-                  step="1"
                   className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                  value={leg.odds}
-                  onChange={(e) => updateLeg(index, 'odds', parseFloat(e.target.value))}
+                  value={oddsInputs[index] || '0'}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    // Allow empty, just minus sign, or valid number pattern
+                    if (value === '' || value === '-' || /^-?\d*\.?\d*$/.test(value)) {
+                      const newInputs = [...oddsInputs];
+                      newInputs[index] = value;
+                      setOddsInputs(newInputs);
+                      const parsed = parseFloat(value);
+                      if (!isNaN(parsed) && value !== '' && value !== '-') {
+                        updateLeg(index, 'odds', parsed);
+                      } else if (value === '' || value === '-') {
+                        updateLeg(index, 'odds', 0);
+                      }
+                    }
+                  }}
+                  onBlur={() => {
+                    // Ensure we have a valid number on blur
+                    const currentValue = oddsInputs[index] || '0';
+                    const parsed = parseFloat(currentValue);
+                    if (isNaN(parsed) || currentValue === '' || currentValue === '-') {
+                      const newInputs = [...oddsInputs];
+                      newInputs[index] = '0';
+                      setOddsInputs(newInputs);
+                      updateLeg(index, 'odds', 0);
+                    } else {
+                      const newInputs = [...oddsInputs];
+                      newInputs[index] = parsed.toString();
+                      setOddsInputs(newInputs);
+                      updateLeg(index, 'odds', parsed);
+                    }
+                  }}
                   placeholder="e.g., -150"
                 />
               </div>

@@ -61,14 +61,24 @@ phases:
       - sam build --template ${CODEBUILD_SRC_DIR}/template.yaml
       - echo "Setting up frontend environment variables..."
       - |
-        # Get API Gateway URL from lambda-functions stack (if it exists)
+        # Try to get custom domain URL first
         API_URL=$(aws cloudformation describe-stacks \
           --stack-name ${PROJECT_NAME}-${ENVIRONMENT}-lambdas \
-          --query 'Stacks[0].Outputs[?OutputKey==`ApiGatewayUrl`].OutputValue' \
+          --query 'Stacks[0].Outputs[?OutputKey==`ApiGatewayCustomUrl`].OutputValue' \
           --output text \
           --region $AWS_REGION 2>/dev/null || echo "")
         
-        # If API URL not found, try to construct it from main stack API Gateway ID
+        # If custom domain not found, try default API Gateway URL
+        if [ -z "$API_URL" ]; then
+          echo "Custom domain URL not found, trying default API Gateway URL..."
+          API_URL=$(aws cloudformation describe-stacks \
+            --stack-name ${PROJECT_NAME}-${ENVIRONMENT}-lambdas \
+            --query 'Stacks[0].Outputs[?OutputKey==`ApiGatewayUrl`].OutputValue' \
+            --output text \
+            --region $AWS_REGION 2>/dev/null || echo "")
+        fi
+        
+        # If API URL still not found, try to construct it from main stack API Gateway ID
         if [ -z "$API_URL" ]; then
           echo "API URL not found in lambda-functions stack, attempting to get from main stack..."
           API_GATEWAY_ID=$(aws cloudformation describe-stacks \
@@ -84,6 +94,8 @@ phases:
             echo "WARNING: Could not determine API Gateway URL. Frontend may not work correctly."
             API_URL=""
           fi
+        else
+          echo "Using API URL: $API_URL"
         fi
         
         # Export Vite environment variables

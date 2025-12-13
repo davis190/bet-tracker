@@ -33,7 +33,7 @@ Resources:
     Properties:
       FunctionName:
         Fn::Sub: ${ProjectName}-${Environment}-get-bets
-      CodeUri: s3://bet-tracker-prod-sam-artifacts-690641653089/b64639f57a3a8c86660fd8ce4d09b354
+      CodeUri: s3://bet-tracker-prod-sam-artifacts-690641653089/60601ac2cfc2b568770f0d195904aec3
       Handler: lambda_function.lambda_handler
       Runtime: python3.12
       Timeout: 30
@@ -65,7 +65,7 @@ Resources:
     Properties:
       FunctionName:
         Fn::Sub: ${ProjectName}-${Environment}-create-bet
-      CodeUri: s3://bet-tracker-prod-sam-artifacts-690641653089/514885aa3ad537b820e2d0817079b6ee
+      CodeUri: s3://bet-tracker-prod-sam-artifacts-690641653089/d321889b3086c2ca8ab4c28204592050
       Handler: lambda_function.lambda_handler
       Runtime: python3.12
       Timeout: 30
@@ -97,7 +97,7 @@ Resources:
     Properties:
       FunctionName:
         Fn::Sub: ${ProjectName}-${Environment}-update-bet
-      CodeUri: s3://bet-tracker-prod-sam-artifacts-690641653089/d9e714bfd1a6e6ab3c8ad10fa29004c2
+      CodeUri: s3://bet-tracker-prod-sam-artifacts-690641653089/734ce3b2ecdc5399d0510d216aa412e7
       Handler: lambda_function.lambda_handler
       Runtime: python3.12
       Timeout: 30
@@ -129,7 +129,7 @@ Resources:
     Properties:
       FunctionName:
         Fn::Sub: ${ProjectName}-${Environment}-delete-bet
-      CodeUri: s3://bet-tracker-prod-sam-artifacts-690641653089/8e95814ca3166bc4fcaa6d911f4a5568
+      CodeUri: s3://bet-tracker-prod-sam-artifacts-690641653089/4e0631bdb5d8ae5cdbfa92bd8e81e721
       Handler: lambda_function.lambda_handler
       Runtime: python3.12
       Timeout: 30
@@ -161,7 +161,7 @@ Resources:
     Properties:
       FunctionName:
         Fn::Sub: ${ProjectName}-${Environment}-clear-week
-      CodeUri: s3://bet-tracker-prod-sam-artifacts-690641653089/c6e70a6863db5823288662681f0a11a7
+      CodeUri: s3://bet-tracker-prod-sam-artifacts-690641653089/ca54ccf2577843b2b91db816ec073554
       Handler: lambda_function.lambda_handler
       Runtime: python3.12
       Timeout: 30
@@ -228,6 +228,33 @@ Resources:
       PathPart: clear
     Metadata:
       SamResourceId: ClearResource
+  GetBetsOptionsMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId:
+        Ref: ApiGatewayId
+      ResourceId:
+        Ref: BetsResource
+      HttpMethod: OPTIONS
+      AuthorizationType: NONE
+      Integration:
+        Type: MOCK
+        IntegrationResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: '''https://bets.claytondavis.dev'''
+            method.response.header.Access-Control-Allow-Headers: '''Content-Type,Authorization'''
+            method.response.header.Access-Control-Allow-Methods: '''GET,POST,PUT,DELETE,OPTIONS'''
+        RequestTemplates:
+          application/json: '{"statusCode": 200}'
+      MethodResponses:
+      - StatusCode: 200
+        ResponseParameters:
+          method.response.header.Access-Control-Allow-Origin: true
+          method.response.header.Access-Control-Allow-Headers: true
+          method.response.header.Access-Control-Allow-Methods: true
+    Metadata:
+      SamResourceId: GetBetsOptionsMethod
   GetBetsMethod:
     Type: AWS::ApiGateway::Method
     Properties:
@@ -262,6 +289,33 @@ Resources:
           Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${CreateBetFunction.Arn}/invocations
     Metadata:
       SamResourceId: CreateBetMethod
+  BetByIdOptionsMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId:
+        Ref: ApiGatewayId
+      ResourceId:
+        Ref: BetByIdResource
+      HttpMethod: OPTIONS
+      AuthorizationType: NONE
+      Integration:
+        Type: MOCK
+        IntegrationResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: '''https://bets.claytondavis.dev'''
+            method.response.header.Access-Control-Allow-Headers: '''Content-Type,Authorization'''
+            method.response.header.Access-Control-Allow-Methods: '''GET,POST,PUT,DELETE,OPTIONS'''
+        RequestTemplates:
+          application/json: '{"statusCode": 200}'
+      MethodResponses:
+      - StatusCode: 200
+        ResponseParameters:
+          method.response.header.Access-Control-Allow-Origin: true
+          method.response.header.Access-Control-Allow-Headers: true
+          method.response.header.Access-Control-Allow-Methods: true
+    Metadata:
+      SamResourceId: BetByIdOptionsMethod
   UpdateBetMethod:
     Type: AWS::ApiGateway::Method
     Properties:
@@ -298,6 +352,33 @@ Resources:
           Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${DeleteBetFunction.Arn}/invocations
     Metadata:
       SamResourceId: DeleteBetMethod
+  ClearWeekOptionsMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId:
+        Ref: ApiGatewayId
+      ResourceId:
+        Ref: ClearResource
+      HttpMethod: OPTIONS
+      AuthorizationType: NONE
+      Integration:
+        Type: MOCK
+        IntegrationResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: '''https://bets.claytondavis.dev'''
+            method.response.header.Access-Control-Allow-Headers: '''Content-Type,Authorization'''
+            method.response.header.Access-Control-Allow-Methods: '''GET,POST,PUT,DELETE,OPTIONS'''
+        RequestTemplates:
+          application/json: '{"statusCode": 200}'
+      MethodResponses:
+      - StatusCode: 200
+        ResponseParameters:
+          method.response.header.Access-Control-Allow-Origin: true
+          method.response.header.Access-Control-Allow-Headers: true
+          method.response.header.Access-Control-Allow-Methods: true
+    Metadata:
+      SamResourceId: ClearWeekOptionsMethod
   ClearWeekMethod:
     Type: AWS::ApiGateway::Method
     Properties:
@@ -374,10 +455,13 @@ Resources:
   ApiGatewayDeployment:
     Type: AWS::ApiGateway::Deployment
     DependsOn:
+    - GetBetsOptionsMethod
     - GetBetsMethod
     - CreateBetMethod
+    - BetByIdOptionsMethod
     - UpdateBetMethod
     - DeleteBetMethod
+    - ClearWeekOptionsMethod
     - ClearWeekMethod
     Properties:
       RestApiId:
@@ -394,3 +478,9 @@ Outputs:
     Export:
       Name:
         Fn::Sub: ${ProjectName}-${Environment}-api-url
+  ApiGatewayCustomUrl:
+    Description: API Gateway Custom Domain URL
+    Value: https://bets-api.claytondavis.dev
+    Export:
+      Name:
+        Fn::Sub: ${ProjectName}-${Environment}-api-custom-url

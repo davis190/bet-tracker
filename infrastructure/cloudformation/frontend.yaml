@@ -89,8 +89,12 @@ Resources:
             ResponseCode: 200
             ResponsePagePath: /index.html
         PriceClass: PriceClass_100
+        Aliases:
+          - bets.claytondavis.dev
         ViewerCertificate:
-          CloudFrontDefaultCertificate: true
+          AcmCertificateArn: arn:aws:acm:us-east-1:690641653089:certificate/353de965-0214-4570-a541-0b944ce658a6
+          SslSupportMethod: sni-only
+          MinimumProtocolVersion: TLSv1.2_2021
 
   # Bucket Policy for CloudFront OAC
   FrontendBucketPolicy:
