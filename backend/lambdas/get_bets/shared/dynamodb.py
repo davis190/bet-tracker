@@ -4,6 +4,7 @@ import os
 import uuid
 from typing import Dict, List, Any, Optional
 from datetime import datetime
+from decimal import Decimal
 import boto3
 from boto3.dynamodb.conditions import Key, Attr
 from botocore.exceptions import ClientError
@@ -20,6 +21,43 @@ def get_table():
     if not table_name:
         raise ValueError("BETS_TABLE_NAME environment variable not set")
     return get_dynamodb_client().Table(table_name)
+
+
+def float_to_decimal(value: Any) -> Any:
+    """
+    Convert float/int values to Decimal for DynamoDB storage.
+    Recursively handles nested structures.
+    Decimal values are left unchanged.
+    """
+    if isinstance(value, Decimal):
+        # Already a Decimal, return as-is
+        return value
+    elif isinstance(value, float) or isinstance(value, int):
+        return Decimal(str(value))
+    elif isinstance(value, dict):
+        return {k: float_to_decimal(v) for k, v in value.items()}
+    elif isinstance(value, list):
+        return [float_to_decimal(item) for item in value]
+    else:
+        return value
+
+
+def decimal_to_float(value: Any) -> Any:
+    """
+    Convert Decimal values back to float/int for Python usage.
+    Recursively handles nested structures.
+    """
+    if isinstance(value, Decimal):
+        # Convert to float, but preserve integers as int where possible
+        float_val = float(value)
+        int_val = int(float_val)
+        return int_val if float_val == int_val else float_val
+    elif isinstance(value, dict):
+        return {k: decimal_to_float(v) for k, v in value.items()}
+    elif isinstance(value, list):
+        return [decimal_to_float(item) for item in value]
+    else:
+        return value
 
 
 def create_bet(user_id: str, bet_data: Dict[str, Any]) -> Dict[str, Any]:
@@ -54,8 +92,8 @@ def create_bet(user_id: str, bet_data: Dict[str, Any]) -> Dict[str, Any]:
         "type": bet_data["type"],
         "status": bet_data.get("status", "pending"),
         "date": bet_data["date"],
-        "amount": bet_data["amount"],
-        "potentialPayout": potential_payout,
+        "amount": float_to_decimal(bet_data["amount"]),
+        "potentialPayout": float_to_decimal(potential_payout),
         "createdAt": now,
         "updatedAt": now,
         "GSI1PK": f"STATUS#{bet_data.get('status', 'pending')}",
@@ -68,13 +106,17 @@ def create_bet(user_id: str, bet_data: Dict[str, Any]) -> Dict[str, Any]:
             "teams": bet_data["teams"],
             "betType": bet_data["betType"],
             "selection": bet_data["selection"],
-            "odds": bet_data["odds"],
+            "odds": float_to_decimal(bet_data["odds"]),
         })
     else:  # parlay
-        item["legs"] = bet_data["legs"]
+        item["legs"] = float_to_decimal(bet_data["legs"])
+    
+    # Convert entire item to ensure all floats are Decimal before writing to DynamoDB
+    item = float_to_decimal(item)
     
     table.put_item(Item=item)
-    return item
+    # Convert back to float for return value
+    return decimal_to_float(item)
 
 
 def get_bets_by_user(
@@ -123,14 +165,17 @@ def get_bets_by_user(
         bets = [b for b in bets if b.get("type") == bet_type]
     
     # Convert DynamoDB types to Python types
+    converted_bets = []
     for bet in bets:
         # Remove DynamoDB keys
         bet.pop("PK", None)
         bet.pop("SK", None)
         bet.pop("GSI1PK", None)
         bet.pop("GSI1SK", None)
+        # Convert Decimal to float/int
+        converted_bets.append(decimal_to_float(bet))
     
-    return bets
+    return converted_bets
 
 
 def get_bet_by_id(user_id: str, bet_id: str) -> Optional[Dict[str, Any]]:
@@ -163,8 +208,8 @@ def get_bet_by_id(user_id: str, bet_id: str) -> Optional[Dict[str, Any]]:
         bet.pop("SK", None)
         bet.pop("GSI1PK", None)
         bet.pop("GSI1SK", None)
-        
-        return bet
+        # Convert Decimal to float/int
+        return decimal_to_float(bet)
     except ClientError:
         return None
 
@@ -194,7 +239,8 @@ def update_bet(user_id: str, bet_id: str, updates: Dict[str, Any]) -> Optional[D
         
         update_expression_parts.append(f"#{key} = :{key}")
         expression_attribute_names[f"#{key}"] = key
-        expression_attribute_values[f":{key}"] = value
+        # Convert float/int to Decimal for DynamoDB
+        expression_attribute_values[f":{key}"] = float_to_decimal(value)
     
     if not update_expression_parts:
         # No updates to make
@@ -337,13 +383,16 @@ def get_all_bets(
         bets = [b for b in bets if b.get("date") <= end_date]
     
     # Convert DynamoDB types to Python types and remove internal keys
+    converted_bets = []
     for bet in bets:
         bet.pop("PK", None)
         bet.pop("SK", None)
         bet.pop("GSI1PK", None)
         bet.pop("GSI1SK", None)
+        # Convert Decimal to float/int
+        converted_bets.append(decimal_to_float(bet))
     
-    return bets
+    return converted_bets
 
 
 def delete_bets_by_week(user_id: str) -> int:
