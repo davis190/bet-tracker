@@ -9,6 +9,7 @@ env/
 venv/
 ENV/
 .venv
+.aws-sam/
 
 # Build outputs
 dist/

@@ -1,0 +1,398 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Lambda functions and API Gateway integrations for Bet Tracker App
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues:
+    - dev
+    - staging
+    - prod
+  ProjectName:
+    Type: String
+    Default: bet-tracker
+  ApiGatewayId:
+    Type: String
+    Description: API Gateway Rest API ID
+  ApiGatewayRootResourceId:
+    Type: String
+    Description: API Gateway Root Resource ID
+  AuthorizerId:
+    Type: String
+    Description: Cognito Authorizer ID
+  BetsTableName:
+    Type: String
+    Description: DynamoDB Bets Table Name
+  UserPoolId:
+    Type: String
+    Description: Cognito User Pool ID
+Resources:
+  GetBetsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName:
+        Fn::Sub: ${ProjectName}-${Environment}-get-bets
+      CodeUri: s3://bet-tracker-prod-sam-artifacts-690641653089/b64639f57a3a8c86660fd8ce4d09b354
+      Handler: lambda_function.lambda_handler
+      Runtime: python3.12
+      Timeout: 30
+      Environment:
+        Variables:
+          BETS_TABLE_NAME:
+            Ref: BetsTableName
+          COGNITO_USER_POOL_ID:
+            Ref: UserPoolId
+      Policies:
+      - AWSLambdaBasicExecutionRole
+      - Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Action:
+          - dynamodb:PutItem
+          - dynamodb:GetItem
+          - dynamodb:UpdateItem
+          - dynamodb:DeleteItem
+          - dynamodb:Query
+          - dynamodb:Scan
+          Resource:
+          - Fn::Sub: arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${BetsTableName}
+          - Fn::Sub: arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${BetsTableName}/index/*
+    Metadata:
+      SamResourceId: GetBetsFunction
+  CreateBetFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName:
+        Fn::Sub: ${ProjectName}-${Environment}-create-bet
+      CodeUri: s3://bet-tracker-prod-sam-artifacts-690641653089/514885aa3ad537b820e2d0817079b6ee
+      Handler: lambda_function.lambda_handler
+      Runtime: python3.12
+      Timeout: 30
+      Environment:
+        Variables:
+          BETS_TABLE_NAME:
+            Ref: BetsTableName
+          COGNITO_USER_POOL_ID:
+            Ref: UserPoolId
+      Policies:
+      - AWSLambdaBasicExecutionRole
+      - Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Action:
+          - dynamodb:PutItem
+          - dynamodb:GetItem
+          - dynamodb:UpdateItem
+          - dynamodb:DeleteItem
+          - dynamodb:Query
+          - dynamodb:Scan
+          Resource:
+          - Fn::Sub: arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${BetsTableName}
+          - Fn::Sub: arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${BetsTableName}/index/*
+    Metadata:
+      SamResourceId: CreateBetFunction
+  UpdateBetFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName:
+        Fn::Sub: ${ProjectName}-${Environment}-update-bet
+      CodeUri: s3://bet-tracker-prod-sam-artifacts-690641653089/d9e714bfd1a6e6ab3c8ad10fa29004c2
+      Handler: lambda_function.lambda_handler
+      Runtime: python3.12
+      Timeout: 30
+      Environment:
+        Variables:
+          BETS_TABLE_NAME:
+            Ref: BetsTableName
+          COGNITO_USER_POOL_ID:
+            Ref: UserPoolId
+      Policies:
+      - AWSLambdaBasicExecutionRole
+      - Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Action:
+          - dynamodb:PutItem
+          - dynamodb:GetItem
+          - dynamodb:UpdateItem
+          - dynamodb:DeleteItem
+          - dynamodb:Query
+          - dynamodb:Scan
+          Resource:
+          - Fn::Sub: arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${BetsTableName}
+          - Fn::Sub: arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${BetsTableName}/index/*
+    Metadata:
+      SamResourceId: UpdateBetFunction
+  DeleteBetFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName:
+        Fn::Sub: ${ProjectName}-${Environment}-delete-bet
+      CodeUri: s3://bet-tracker-prod-sam-artifacts-690641653089/8e95814ca3166bc4fcaa6d911f4a5568
+      Handler: lambda_function.lambda_handler
+      Runtime: python3.12
+      Timeout: 30
+      Environment:
+        Variables:
+          BETS_TABLE_NAME:
+            Ref: BetsTableName
+          COGNITO_USER_POOL_ID:
+            Ref: UserPoolId
+      Policies:
+      - AWSLambdaBasicExecutionRole
+      - Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Action:
+          - dynamodb:PutItem
+          - dynamodb:GetItem
+          - dynamodb:UpdateItem
+          - dynamodb:DeleteItem
+          - dynamodb:Query
+          - dynamodb:Scan
+          Resource:
+          - Fn::Sub: arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${BetsTableName}
+          - Fn::Sub: arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${BetsTableName}/index/*
+    Metadata:
+      SamResourceId: DeleteBetFunction
+  ClearWeekFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName:
+        Fn::Sub: ${ProjectName}-${Environment}-clear-week
+      CodeUri: s3://bet-tracker-prod-sam-artifacts-690641653089/c6e70a6863db5823288662681f0a11a7
+      Handler: lambda_function.lambda_handler
+      Runtime: python3.12
+      Timeout: 30
+      Environment:
+        Variables:
+          BETS_TABLE_NAME:
+            Ref: BetsTableName
+          COGNITO_USER_POOL_ID:
+            Ref: UserPoolId
+      Policies:
+      - AWSLambdaBasicExecutionRole
+      - Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Action:
+          - dynamodb:PutItem
+          - dynamodb:GetItem
+          - dynamodb:UpdateItem
+          - dynamodb:DeleteItem
+          - dynamodb:Query
+          - dynamodb:Scan
+          Resource:
+          - Fn::Sub: arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${BetsTableName}
+          - Fn::Sub: arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${BetsTableName}/index/*
+    Metadata:
+      SamResourceId: ClearWeekFunction
+  BetsResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId:
+        Ref: ApiGatewayId
+      ParentId:
+        Ref: ApiGatewayRootResourceId
+      PathPart: bets
+    Metadata:
+      SamResourceId: BetsResource
+  BetByIdResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId:
+        Ref: ApiGatewayId
+      ParentId:
+        Ref: BetsResource
+      PathPart: '{betId}'
+    Metadata:
+      SamResourceId: BetByIdResource
+  WeekResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId:
+        Ref: ApiGatewayId
+      ParentId:
+        Ref: BetsResource
+      PathPart: week
+    Metadata:
+      SamResourceId: WeekResource
+  ClearResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId:
+        Ref: ApiGatewayId
+      ParentId:
+        Ref: WeekResource
+      PathPart: clear
+    Metadata:
+      SamResourceId: ClearResource
+  GetBetsMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId:
+        Ref: ApiGatewayId
+      ResourceId:
+        Ref: BetsResource
+      HttpMethod: GET
+      AuthorizationType: COGNITO_USER_POOLS
+      AuthorizerId:
+        Ref: AuthorizerId
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${GetBetsFunction.Arn}/invocations
+    Metadata:
+      SamResourceId: GetBetsMethod
+  CreateBetMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId:
+        Ref: ApiGatewayId
+      ResourceId:
+        Ref: BetsResource
+      HttpMethod: POST
+      AuthorizationType: COGNITO_USER_POOLS
+      AuthorizerId:
+        Ref: AuthorizerId
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${CreateBetFunction.Arn}/invocations
+    Metadata:
+      SamResourceId: CreateBetMethod
+  UpdateBetMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId:
+        Ref: ApiGatewayId
+      ResourceId:
+        Ref: BetByIdResource
+      HttpMethod: PUT
+      AuthorizationType: COGNITO_USER_POOLS
+      AuthorizerId:
+        Ref: AuthorizerId
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${UpdateBetFunction.Arn}/invocations
+    Metadata:
+      SamResourceId: UpdateBetMethod
+  DeleteBetMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId:
+        Ref: ApiGatewayId
+      ResourceId:
+        Ref: BetByIdResource
+      HttpMethod: DELETE
+      AuthorizationType: COGNITO_USER_POOLS
+      AuthorizerId:
+        Ref: AuthorizerId
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${DeleteBetFunction.Arn}/invocations
+    Metadata:
+      SamResourceId: DeleteBetMethod
+  ClearWeekMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId:
+        Ref: ApiGatewayId
+      ResourceId:
+        Ref: ClearResource
+      HttpMethod: DELETE
+      AuthorizationType: COGNITO_USER_POOLS
+      AuthorizerId:
+        Ref: AuthorizerId
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ClearWeekFunction.Arn}/invocations
+    Metadata:
+      SamResourceId: ClearWeekMethod
+  GetBetsPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName:
+        Ref: GetBetsFunction
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn:
+        Fn::Sub: arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiGatewayId}/*/*
+    Metadata:
+      SamResourceId: GetBetsPermission
+  CreateBetPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName:
+        Ref: CreateBetFunction
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn:
+        Fn::Sub: arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiGatewayId}/*/*
+    Metadata:
+      SamResourceId: CreateBetPermission
+  UpdateBetPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName:
+        Ref: UpdateBetFunction
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn:
+        Fn::Sub: arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiGatewayId}/*/*
+    Metadata:
+      SamResourceId: UpdateBetPermission
+  DeleteBetPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName:
+        Ref: DeleteBetFunction
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn:
+        Fn::Sub: arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiGatewayId}/*/*
+    Metadata:
+      SamResourceId: DeleteBetPermission
+  ClearWeekPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName:
+        Ref: ClearWeekFunction
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn:
+        Fn::Sub: arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiGatewayId}/*/*
+    Metadata:
+      SamResourceId: ClearWeekPermission
+  ApiGatewayDeployment:
+    Type: AWS::ApiGateway::Deployment
+    DependsOn:
+    - GetBetsMethod
+    - CreateBetMethod
+    - UpdateBetMethod
+    - DeleteBetMethod
+    - ClearWeekMethod
+    Properties:
+      RestApiId:
+        Ref: ApiGatewayId
+      StageName:
+        Ref: Environment
+    Metadata:
+      SamResourceId: ApiGatewayDeployment
+Outputs:
+  ApiGatewayUrl:
+    Description: API Gateway Base URL
+    Value:
+      Fn::Sub: https://${ApiGatewayId}.execute-api.${AWS::Region}.amazonaws.com/${Environment}
+    Export:
+      Name:
+        Fn::Sub: ${ProjectName}-${Environment}-api-url

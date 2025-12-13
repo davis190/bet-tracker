@@ -28,26 +28,32 @@ A serverless sports bet tracking application built with AWS Lambda, API Gateway,
 
 ## Deployment
 
-### 1. Deploy Infrastructure
+### Manual Deployment (One-Time Infrastructure Setup)
 
-Deploy CloudFormation stacks:
+**You only need to do this once** to set up the AWS infrastructure. After this, CodeBuild will handle all application deployments automatically.
+
+Deploy all CloudFormation stacks:
 
 ```bash
 cd infrastructure
-./deploy.sh dev
+./deploy.sh dev  # or staging, prod
 ```
 
-This will create:
-- Cognito User Pool
-- DynamoDB Table
-- API Gateway
-- Lambda Functions
-- S3 Bucket and CloudFront Distribution
-- CodeBuild Project
+This script deploys the following stacks in order:
+1. **main.yaml** - Cognito User Pool, DynamoDB Table, API Gateway, SAM Artifacts Bucket
+2. **frontend.yaml** - S3 Bucket for frontend, CloudFront Distribution
+3. **lambda-functions.yaml** - Lambda functions with API Gateway integration
+4. **codebuild.yaml** - CodeBuild project for CI/CD
 
-### 2. Configure Frontend Environment Variables
+After deployment, the script will output:
+- User Pool ID and Client ID (for frontend configuration)
+- API Gateway URL
+- Frontend Bucket name
+- CloudFront Distribution ID
 
-Create `frontend/.env.local`:
+### Configure Frontend Environment Variables
+
+After the infrastructure is deployed, create `frontend/.env.local` with values from the CloudFormation outputs:
 
 ```env
 VITE_API_ENDPOINT=https://your-api-id.execute-api.us-east-1.amazonaws.com/dev
@@ -56,41 +62,16 @@ VITE_COGNITO_CLIENT_ID=your-client-id
 VITE_AWS_REGION=us-east-1
 ```
 
-### 3. Package and Deploy Lambda Functions
+### Automatic Deployment (CodeBuild)
 
-```bash
-cd backend
-pip install -r requirements.txt -t .
+Once the infrastructure is set up, **CodeBuild automatically handles all deployments** when you push code to your repository:
 
-# Package each Lambda function
-cd lambdas/get_bets
-zip -r ../../../dist/get_bets.zip . -x "*.pyc" -x "__pycache__/*"
-# Repeat for other Lambda functions
+1. **Lambda Functions**: Built with SAM and deployed using `sam deploy`
+2. **Frontend**: Built with Vite and deployed to S3, then CloudFront cache is invalidated
 
-# Deploy using AWS CLI
-aws lambda update-function-code --function-name bet-tracker-dev-get-bets --zip-file fileb://../../dist/get_bets.zip
-```
+The `buildspec.yml` file defines the build process. The CodeBuild project is configured with all necessary environment variables from the CloudFormation stacks.
 
-### 4. Build and Deploy Frontend
-
-```bash
-cd frontend
-npm install
-npm run build
-
-# Deploy to S3
-aws s3 sync dist s3://bet-tracker-dev-frontend-<account-id> --delete
-
-# Invalidate CloudFront
-aws cloudfront create-invalidation --distribution-id <distribution-id> --paths "/*"
-```
-
-## CodeBuild Deployment
-
-The project includes a `buildspec.yml` for automated deployments via CodeBuild. Configure CodeBuild to:
-1. Use the buildspec.yml file
-2. Set environment variables from CloudFormation outputs
-3. Deploy on code push to your repository
+**No manual deployment needed after initial setup!** Just push your code and CodeBuild will deploy it.
 
 ## Local Development
 

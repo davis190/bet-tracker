@@ -19,6 +19,24 @@ phases:
       - export AWS_DEFAULT_REGION=$AWS_REGION
       - echo "Environment - $ENVIRONMENT"
       - echo "Project - $PROJECT_NAME"
+      - echo "Verifying SAM artifacts bucket exists..."
+      - |
+        if [ -z "$SAM_BUCKET" ]; then
+          echo "ERROR: SAM_BUCKET environment variable is not set!"
+          echo "Please ensure the CodeBuild project has the SAM_BUCKET environment variable configured."
+          echo "The bucket should be created via the main CloudFormation stack."
+          exit 1
+        fi
+      - echo "SAM_BUCKET value: $SAM_BUCKET"
+      - |
+        if aws s3 ls "s3://$SAM_BUCKET" 2>/dev/null; then
+          echo "✓ SAM bucket $SAM_BUCKET exists"
+        else
+          echo "ERROR: SAM bucket $SAM_BUCKET does not exist!"
+          echo "Please deploy the main CloudFormation stack to create the bucket:"
+          echo "  cd infrastructure && ./deploy.sh $ENVIRONMENT"
+          exit 1
+        fi
 
   build:
     commands:
@@ -52,7 +70,7 @@ phases:
       - echo "Packaging Lambda functions with SAM..."
       - sam package --template-file ${CODEBUILD_SRC_DIR}/.aws-sam/build/template.yaml --s3-bucket $SAM_BUCKET --output-template-file ${CODEBUILD_SRC_DIR}/packaged.yaml --region $AWS_REGION
       - echo "Deploying Lambda functions with SAM..."
-      - sam deploy --template-file ${CODEBUILD_SRC_DIR}/packaged.yaml --stack-name ${PROJECT_NAME}-${ENVIRONMENT}-lambda-functions --capabilities CAPABILITY_IAM --parameter-overrides Environment=$ENVIRONMENT ProjectName=$PROJECT_NAME BetsTableName=$BETS_TABLE_NAME UserPoolId=$USER_POOL_ID --region $AWS_REGION --no-fail-on-empty-changeset
+      - sam deploy --template-file ${CODEBUILD_SRC_DIR}/packaged.yaml --stack-name ${PROJECT_NAME}-${ENVIRONMENT}-lambdas --capabilities CAPABILITY_IAM --parameter-overrides Environment=$ENVIRONMENT ProjectName=$PROJECT_NAME BetsTableName=$BETS_TABLE_NAME UserPoolId=$USER_POOL_ID --region $AWS_REGION --no-fail-on-empty-changeset
       - echo "Deploying frontend to S3..."
       - aws s3 sync ${CODEBUILD_SRC_DIR}/frontend/dist s3://$FRONTEND_BUCKET --delete
       - echo "Invalidating CloudFront cache..."
