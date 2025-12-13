@@ -9,7 +9,7 @@ phases:
       - echo "Installing dependencies..."
       - pip install --upgrade pip
       - cd backend && pip install -r requirements.txt -t .
-      - cd ../frontend && npm ci
+      - cd ../frontend && npm install
 
   pre_build:
     commands:
