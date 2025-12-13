@@ -27,7 +27,6 @@ Globals:
     Environment:
       Variables:
         BETS_TABLE_NAME: !Ref BetsTableName
-        AWS_REGION: !Ref AWS::Region
         COGNITO_USER_POOL_ID: !Ref UserPoolId
 
 Resources:
