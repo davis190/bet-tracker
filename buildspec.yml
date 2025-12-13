@@ -9,8 +9,9 @@ phases:
       - echo "Installing dependencies..."
       - pip install --upgrade pip
       - pip install aws-sam-cli
-      - cd backend && pip install -r requirements.txt -t .
-      - cd ../frontend && npm install
+      - cd ${CODEBUILD_SRC_DIR}/backend && pip install -r requirements.txt -t .
+      - cd ${CODEBUILD_SRC_DIR}/frontend && npm install
+      - cd ${CODEBUILD_SRC_DIR}
 
   pre_build:
     commands:
@@ -22,22 +23,24 @@ phases:
   build:
     commands:
       - echo "Preparing Lambda functions for SAM build..."
+      - cd ${CODEBUILD_SRC_DIR}
       - |
         # Copy shared code and requirements.txt into each lambda directory
         shopt -s nullglob
-        for lambda_dir in backend/lambdas/*/; do
+        for lambda_dir in ${CODEBUILD_SRC_DIR}/backend/lambdas/*/; do
           [ -d "$lambda_dir" ] || continue
           lambda_name=$(basename "$lambda_dir")
           echo "Preparing $lambda_name..."
           # Copy shared code
-          cp -r backend/shared "$lambda_dir/"
+          cp -r ${CODEBUILD_SRC_DIR}/backend/shared "$lambda_dir/"
           # Copy requirements.txt if it doesn't exist or is empty
           if [ ! -f "$lambda_dir/requirements.txt" ] || [ ! -s "$lambda_dir/requirements.txt" ]; then
-            cp backend/requirements.txt "$lambda_dir/requirements.txt"
+            cp ${CODEBUILD_SRC_DIR}/backend/requirements.txt "$lambda_dir/requirements.txt"
           fi
         done
       - echo "Building Lambda functions with SAM..."
-      - sam build --template template.yaml
+      - cd ${CODEBUILD_SRC_DIR}
+      - sam build --template ${CODEBUILD_SRC_DIR}/template.yaml
       - echo "Building frontend..."
       - cd ${CODEBUILD_SRC_DIR}/frontend
       - npm run build
@@ -45,12 +48,13 @@ phases:
 
   post_build:
     commands:
+      - cd ${CODEBUILD_SRC_DIR}
       - echo "Packaging Lambda functions with SAM..."
-      - sam package --template-file .aws-sam/build/template.yaml --s3-bucket $SAM_BUCKET --output-template-file packaged.yaml --region $AWS_REGION
+      - sam package --template-file ${CODEBUILD_SRC_DIR}/.aws-sam/build/template.yaml --s3-bucket $SAM_BUCKET --output-template-file ${CODEBUILD_SRC_DIR}/packaged.yaml --region $AWS_REGION
       - echo "Deploying Lambda functions with SAM..."
-      - sam deploy --template-file packaged.yaml --stack-name ${PROJECT_NAME}-${ENVIRONMENT}-lambda-functions --capabilities CAPABILITY_IAM --parameter-overrides Environment=$ENVIRONMENT ProjectName=$PROJECT_NAME BetsTableName=$BETS_TABLE_NAME UserPoolId=$USER_POOL_ID --region $AWS_REGION --no-fail-on-empty-changeset
+      - sam deploy --template-file ${CODEBUILD_SRC_DIR}/packaged.yaml --stack-name ${PROJECT_NAME}-${ENVIRONMENT}-lambda-functions --capabilities CAPABILITY_IAM --parameter-overrides Environment=$ENVIRONMENT ProjectName=$PROJECT_NAME BetsTableName=$BETS_TABLE_NAME UserPoolId=$USER_POOL_ID --region $AWS_REGION --no-fail-on-empty-changeset
       - echo "Deploying frontend to S3..."
-      - aws s3 sync frontend/dist s3://$FRONTEND_BUCKET --delete
+      - aws s3 sync ${CODEBUILD_SRC_DIR}/frontend/dist s3://$FRONTEND_BUCKET --delete
       - echo "Invalidating CloudFront cache..."
       - aws cloudfront create-invalidation \
           --distribution-id $CLOUDFRONT_DISTRIBUTION_ID \
