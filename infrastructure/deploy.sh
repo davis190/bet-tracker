@@ -60,6 +60,12 @@ BETS_TABLE_NAME=$(aws cloudformation describe-stacks \
   --output text \
   --region ${REGION})
 
+SAM_BUCKET_NAME=$(aws cloudformation describe-stacks \
+  --stack-name ${PROJECT_NAME}-${ENVIRONMENT}-main \
+  --query 'Stacks[0].Outputs[?OutputKey==`SamArtifactsBucketName`].OutputValue' \
+  --output text \
+  --region ${REGION})
+
 # Deploy frontend stack
 echo "Deploying frontend stack..."
 aws cloudformation deploy \
@@ -120,6 +126,7 @@ aws cloudformation deploy \
     BetsTableName=${BETS_TABLE_NAME} \
     UserPoolId=${USER_POOL_ID} \
     UserPoolClientId=${USER_POOL_CLIENT_ID} \
+    SamArtifactsBucketName=${SAM_BUCKET_NAME} \
   --capabilities CAPABILITY_NAMED_IAM \
   --region ${REGION}
 

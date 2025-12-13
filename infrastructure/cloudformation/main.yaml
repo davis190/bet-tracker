@@ -97,6 +97,19 @@ Resources:
         - !GetAtt UserPool.Arn
       IdentitySource: method.request.header.Authorization
 
+  # S3 Bucket for SAM artifacts
+  SamArtifactsBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub '${ProjectName}-${Environment}-sam-artifacts-${AWS::AccountId}'
+      VersioningConfiguration:
+        Status: Enabled
+      LifecycleConfiguration:
+        Rules:
+          - Id: DeleteOldArtifacts
+            Status: Enabled
+            ExpirationInDays: 30
+
 Outputs:
   UserPoolId:
     Description: Cognito User Pool ID
@@ -133,4 +146,10 @@ Outputs:
     Value: !Ref CognitoAuthorizer
     Export:
       Name: !Sub '${ProjectName}-${Environment}-authorizer-id'
+
+  SamArtifactsBucketName:
+    Description: S3 Bucket Name for SAM Artifacts
+    Value: !Ref SamArtifactsBucket
+    Export:
+      Name: !Sub '${ProjectName}-${Environment}-sam-artifacts-bucket'
 
