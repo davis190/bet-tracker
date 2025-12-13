@@ -1,15 +1,18 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { Bet, isSingleBet, isParlay } from '../types/bet';
 import { apiClient } from '../services/api';
 import { BetCard } from '../components/dashboard/BetCard';
 import { ParlayCard } from '../components/dashboard/ParlayCard';
 import { StatsOverview } from '../components/dashboard/StatsOverview';
 import { LoadingSpinner } from '../components/shared/LoadingSpinner';
+import { useAuth } from '../contexts/AuthContext';
 
 export const Dashboard: React.FC = () => {
   const [bets, setBets] = useState<Bet[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const { isAuthenticated } = useAuth();
 
   useEffect(() => {
     loadBets();
@@ -20,7 +23,7 @@ export const Dashboard: React.FC = () => {
       const data = await apiClient.getBets();
       setBets(data);
     } catch (err: any) {
-      setError('Failed to load bets. Please ensure you are logged in.');
+      setError('Failed to load bets. Please try again later.');
       console.error('Failed to load bets:', err);
     } finally {
       setLoading(false);
@@ -41,7 +44,15 @@ export const Dashboard: React.FC = () => {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
         <div className="text-center">
-          <p className="text-red-600 dark:text-red-400">{error}</p>
+          <p className="text-red-600 dark:text-red-400 mb-4">{error}</p>
+          {!isAuthenticated && (
+            <Link
+              to="/login"
+              className="inline-block px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+            >
+              Login to Manage Bets
+            </Link>
+          )}
         </div>
       </div>
     );
@@ -54,7 +65,24 @@ export const Dashboard: React.FC = () => {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <header className="bg-white dark:bg-gray-800 shadow">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold">Bet Tracker Dashboard</h1>
+          <div className="flex justify-between items-center">
+            <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold">Bet Tracker Dashboard</h1>
+            {isAuthenticated ? (
+              <Link
+                to="/admin"
+                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+              >
+                Manage Bets
+              </Link>
+            ) : (
+              <Link
+                to="/login"
+                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+              >
+                Login to Manage
+              </Link>
+            )}
+          </div>
         </div>
       </header>
 

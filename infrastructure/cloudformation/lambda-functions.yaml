@@ -207,15 +207,14 @@ Resources:
       ParentId: !Ref WeekResource
       PathPart: clear
 
-  # GET /bets
+  # GET /bets (public - no authentication required)
   GetBetsMethod:
     Type: AWS::ApiGateway::Method
     Properties:
       RestApiId: !Ref ApiGatewayId
       ResourceId: !Ref BetsResource
       HttpMethod: GET
-      AuthorizationType: COGNITO_USER_POOLS
-      AuthorizerId: !Ref AuthorizerId
+      AuthorizationType: NONE
       Integration:
         Type: AWS_PROXY
         IntegrationHttpMethod: POST

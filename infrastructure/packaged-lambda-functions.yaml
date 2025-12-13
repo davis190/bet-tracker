@@ -236,9 +236,7 @@ Resources:
       ResourceId:
         Ref: BetsResource
       HttpMethod: GET
-      AuthorizationType: COGNITO_USER_POOLS
-      AuthorizerId:
-        Ref: AuthorizerId
+      AuthorizationType: NONE
       Integration:
         Type: AWS_PROXY
         IntegrationHttpMethod: POST

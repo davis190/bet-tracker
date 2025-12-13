@@ -1,4 +1,4 @@
-"""Lambda function to get bets for authenticated user."""
+"""Lambda function to get bets - public view or for authenticated user."""
 
 import sys
 import os
@@ -11,16 +11,14 @@ if os.path.exists(shared_path):
 
 from shared.responses import success_response, error_response
 from shared.auth import get_user_id_from_event
-from shared.dynamodb import get_bets_by_user
+from shared.dynamodb import get_bets_by_user, get_all_bets
 
 
 def lambda_handler(event, context):
     """Handle GET /bets request."""
     try:
-        # Get user ID from event
+        # Get user ID from event (may be None for public access)
         user_id = get_user_id_from_event(event)
-        if not user_id:
-            return error_response("Unauthorized", 401, "UNAUTHORIZED")
         
         # Get query parameters
         query_params = event.get("queryStringParameters") or {}
@@ -29,14 +27,23 @@ def lambda_handler(event, context):
         end_date = query_params.get("endDate")
         bet_type = query_params.get("type")
         
-        # Get bets
-        bets = get_bets_by_user(
-            user_id=user_id,
-            status=status,
-            start_date=start_date,
-            end_date=end_date,
-            bet_type=bet_type,
-        )
+        # If authenticated, get user's bets; otherwise get all bets (public view)
+        if user_id:
+            bets = get_bets_by_user(
+                user_id=user_id,
+                status=status,
+                start_date=start_date,
+                end_date=end_date,
+                bet_type=bet_type,
+            )
+        else:
+            # Public access - get all bets
+            bets = get_all_bets(
+                status=status,
+                start_date=start_date,
+                end_date=end_date,
+                bet_type=bet_type,
+            )
         
         return success_response({"bets": bets})
     
