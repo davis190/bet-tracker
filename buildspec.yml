@@ -59,6 +59,44 @@ phases:
       - echo "Building Lambda functions with SAM..."
       - cd ${CODEBUILD_SRC_DIR}
       - sam build --template ${CODEBUILD_SRC_DIR}/template.yaml
+      - echo "Setting up frontend environment variables..."
+      - |
+        # Get API Gateway URL from lambda-functions stack (if it exists)
+        API_URL=$(aws cloudformation describe-stacks \
+          --stack-name ${PROJECT_NAME}-${ENVIRONMENT}-lambdas \
+          --query 'Stacks[0].Outputs[?OutputKey==`ApiGatewayUrl`].OutputValue' \
+          --output text \
+          --region $AWS_REGION 2>/dev/null || echo "")
+        
+        # If API URL not found, try to construct it from main stack API Gateway ID
+        if [ -z "$API_URL" ]; then
+          echo "API URL not found in lambda-functions stack, attempting to get from main stack..."
+          API_GATEWAY_ID=$(aws cloudformation describe-stacks \
+            --stack-name ${PROJECT_NAME}-${ENVIRONMENT}-main \
+            --query 'Stacks[0].Outputs[?OutputKey==`ApiGatewayId`].OutputValue' \
+            --output text \
+            --region $AWS_REGION 2>/dev/null || echo "")
+          
+          if [ -n "$API_GATEWAY_ID" ]; then
+            API_URL="https://${API_GATEWAY_ID}.execute-api.${AWS_REGION}.amazonaws.com/${ENVIRONMENT}"
+            echo "Constructed API URL: $API_URL"
+          else
+            echo "WARNING: Could not determine API Gateway URL. Frontend may not work correctly."
+            API_URL=""
+          fi
+        fi
+        
+        # Export Vite environment variables
+        export VITE_API_ENDPOINT="$API_URL"
+        export VITE_COGNITO_USER_POOL_ID="$USER_POOL_ID"
+        export VITE_COGNITO_CLIENT_ID="$USER_POOL_CLIENT_ID"
+        export VITE_AWS_REGION="$AWS_REGION"
+        
+        echo "Vite environment variables:"
+        echo "  VITE_API_ENDPOINT=$VITE_API_ENDPOINT"
+        echo "  VITE_COGNITO_USER_POOL_ID=$VITE_COGNITO_USER_POOL_ID"
+        echo "  VITE_COGNITO_CLIENT_ID=$VITE_COGNITO_CLIENT_ID"
+        echo "  VITE_AWS_REGION=$VITE_AWS_REGION"
       - echo "Building frontend..."
       - cd ${CODEBUILD_SRC_DIR}/frontend
       - npm run build

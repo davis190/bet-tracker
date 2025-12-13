@@ -1,6 +1,14 @@
 import { CognitoUser, CognitoUserPool, AuthenticationDetails, CognitoUserSession, CognitoUserAttribute } from 'amazon-cognito-identity-js';
 import { config } from './config';
 
+// Validate Cognito configuration
+if (!config.cognito.userPoolId || !config.cognito.clientId) {
+  console.error('Cognito configuration is missing. Required environment variables:');
+  console.error('  VITE_COGNITO_USER_POOL_ID:', config.cognito.userPoolId || 'MISSING');
+  console.error('  VITE_COGNITO_CLIENT_ID:', config.cognito.clientId || 'MISSING');
+  throw new Error('Cognito configuration is incomplete. Both UserPoolId and ClientId are required.');
+}
+
 const poolData = {
   UserPoolId: config.cognito.userPoolId,
   ClientId: config.cognito.clientId,
