@@ -1,0 +1,70 @@
+version: 0.2
+
+phases:
+  install:
+    runtime-versions:
+      python: 3.11
+      nodejs: 18
+    commands:
+      - echo "Installing dependencies..."
+      - pip install --upgrade pip
+      - cd backend && pip install -r requirements.txt -t .
+      - cd ../frontend && npm ci
+
+  pre_build:
+    commands:
+      - echo "Pre-build phase..."
+      - export AWS_DEFAULT_REGION=$AWS_REGION
+      - echo "Environment: $ENVIRONMENT"
+      - echo "Project: $PROJECT_NAME"
+
+  build:
+    commands:
+      - echo "Building Lambda functions..."
+      - mkdir -p dist
+      - |
+        for lambda_dir in backend/lambdas/*/; do
+          lambda_name=$(basename $lambda_dir)
+          echo "Packaging $lambda_name..."
+          # Create temporary directory for packaging
+          mkdir -p /tmp/${lambda_name}
+          # Copy Lambda function code (excluding __pycache__)
+          find ${lambda_dir} -type f -name "*.py" ! -path "*/__pycache__/*" -exec cp {} /tmp/${lambda_name}/ \;
+          # Copy shared directory to root of package
+          mkdir -p /tmp/${lambda_name}/shared
+          cp -r backend/shared/*.py /tmp/${lambda_name}/shared/
+          # Create zip
+          cd /tmp/${lambda_name}
+          zip -r ../../dist/${lambda_name}.zip . -x "*.pyc" -x "__pycache__/*" -x "*.git*" -x "requirements.txt"
+          cd ../../..
+          rm -rf /tmp/${lambda_name}
+        done
+      - echo "Building frontend..."
+      - cd frontend
+      - npm run build
+      - cd ..
+
+  post_build:
+    commands:
+      - echo "Deploying Lambda functions..."
+      - |
+        for lambda_zip in dist/*.zip; do
+          lambda_name=$(basename $lambda_zip .zip)
+          function_name="${PROJECT_NAME}-${ENVIRONMENT}-${lambda_name}"
+          echo "Updating Lambda function: $function_name"
+          aws lambda update-function-code \
+            --function-name $function_name \
+            --zip-file fileb://$lambda_zip \
+            --region $AWS_REGION || echo "Function $function_name not found, skipping..."
+        done
+      - echo "Deploying frontend to S3..."
+      - aws s3 sync frontend/dist s3://$FRONTEND_BUCKET --delete
+      - echo "Invalidating CloudFront cache..."
+      - aws cloudfront create-invalidation \
+          --distribution-id $CLOUDFRONT_DISTRIBUTION_ID \
+          --paths "/*"
+
+artifacts:
+  files:
+    - 'dist/**/*'
+

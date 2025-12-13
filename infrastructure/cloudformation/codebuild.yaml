@@ -1,0 +1,131 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'CodeBuild project for automated deployments'
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues: [dev, staging, prod]
+  
+  ProjectName:
+    Type: String
+    Default: bet-tracker
+  
+  FrontendBucketName:
+    Type: String
+    Description: S3 Bucket Name for Frontend
+  
+  CloudFrontDistributionId:
+    Type: String
+    Description: CloudFront Distribution ID
+  
+  ApiGatewayId:
+    Type: String
+    Description: API Gateway Rest API ID
+  
+  BetsTableName:
+    Type: String
+    Description: DynamoDB Bets Table Name
+  
+  UserPoolId:
+    Type: String
+    Description: Cognito User Pool ID
+  
+  UserPoolClientId:
+    Type: String
+    Description: Cognito User Pool Client ID
+
+Resources:
+  # CodeBuild Service Role
+  CodeBuildRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub '${ProjectName}-${Environment}-codebuild-role'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: codebuild.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: CodeBuildPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - s3:PutObject
+                  - s3:GetObject
+                  - s3:DeleteObject
+                  - s3:ListBucket
+                Resource:
+                  - !Sub 'arn:aws:s3:::${FrontendBucketName}'
+                  - !Sub 'arn:aws:s3:::${FrontendBucketName}/*'
+              - Effect: Allow
+                Action:
+                  - cloudfront:CreateInvalidation
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - lambda:UpdateFunctionCode
+                  - lambda:GetFunction
+                  - lambda:ListFunctions
+                Resource: !Sub 'arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${ProjectName}-${Environment}-*'
+
+  # CodeBuild Project
+  CodeBuildProject:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      Name: !Sub '${ProjectName}-${Environment}-build'
+      Description: Build and deploy Bet Tracker App
+      ServiceRole: !GetAtt CodeBuildRole.Arn
+      Artifacts:
+        Type: NO_ARTIFACTS
+      Environment:
+        Type: LINUX_CONTAINER
+        ComputeType: BUILD_GENERAL1_SMALL
+        Image: aws/codebuild/standard:7.0
+        EnvironmentVariables:
+          - Name: ENVIRONMENT
+            Value: !Ref Environment
+          - Name: PROJECT_NAME
+            Value: !Ref ProjectName
+          - Name: FRONTEND_BUCKET
+            Value: !Ref FrontendBucketName
+          - Name: CLOUDFRONT_DISTRIBUTION_ID
+            Value: !Ref CloudFrontDistributionId
+          - Name: AWS_REGION
+            Value: !Ref AWS::Region
+          - Name: BETS_TABLE_NAME
+            Value: !Ref BetsTableName
+          - Name: USER_POOL_ID
+            Value: !Ref UserPoolId
+          - Name: USER_POOL_CLIENT_ID
+            Value: !Ref UserPoolClientId
+      Source:
+        Type: S3
+        Location: ''  # Will be set based on source repository
+        BuildSpec: buildspec.yml
+      TimeoutInMinutes: 60
+
+  # CloudWatch Log Group
+  CodeBuildLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/codebuild/${ProjectName}-${Environment}-build'
+      RetentionInDays: 30
+
+Outputs:
+  CodeBuildProjectName:
+    Description: CodeBuild Project Name
+    Value: !Ref CodeBuildProject
+    Export:
+      Name: !Sub '${ProjectName}-${Environment}-codebuild-project'
+

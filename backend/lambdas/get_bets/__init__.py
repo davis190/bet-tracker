@@ -1,0 +1,2 @@
+# Get Bets Lambda Function
+
