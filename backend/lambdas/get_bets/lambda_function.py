@@ -16,8 +16,14 @@ from shared.dynamodb import get_bets_by_user, get_all_bets
 
 def lambda_handler(event, context):
     """Handle GET /bets request."""
+    # Log the incoming request for debugging
+    print(f"Received request: httpMethod={event.get('httpMethod')}, path={event.get('path')}")
+    print(f"Request context: {event.get('requestContext', {})}")
+    
     # Handle OPTIONS request for CORS preflight
-    if event.get("httpMethod") == "OPTIONS" or event.get("requestContext", {}).get("http", {}).get("method") == "OPTIONS":
+    http_method = event.get("httpMethod") or event.get("requestContext", {}).get("http", {}).get("method")
+    if http_method == "OPTIONS":
+        print("Handling OPTIONS request - returning CORS response")
         return options_response()
     
     try:

@@ -331,7 +331,7 @@ Resources:
       FunctionName: !Ref CreateBetFunction
       Action: lambda:InvokeFunction
       Principal: apigateway.amazonaws.com
-      SourceArn: !Sub 'arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiGatewayId}/${Environment}/*/*'
+      SourceArn: !Sub 'arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiGatewayId}/*/*'
 
   UpdateBetPermission:
     Type: AWS::Lambda::Permission
@@ -347,7 +347,7 @@ Resources:
       FunctionName: !Ref DeleteBetFunction
       Action: lambda:InvokeFunction
       Principal: apigateway.amazonaws.com
-      SourceArn: !Sub 'arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiGatewayId}/${Environment}/*/*'
+      SourceArn: !Sub 'arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiGatewayId}/*/*'
 
   ClearWeekPermission:
     Type: AWS::Lambda::Permission
@@ -358,7 +358,7 @@ Resources:
       SourceArn: !Sub 'arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiGatewayId}/*/*'
 
   # API Gateway Deployment
-  # Note: Description includes timestamp to force new deployment when methods change
+  # Note: StageDescription is updated to force new deployment when methods change
   ApiGatewayDeployment:
     Type: AWS::ApiGateway::Deployment
     DependsOn:
@@ -374,6 +374,7 @@ Resources:
       RestApiId: !Ref ApiGatewayId
       StageName: !Ref Environment
       Description: !Sub 'Deployment - OPTIONS methods use AWS_PROXY integration'
+      StageDescription: !Sub 'OPTIONS methods configured with AWS_PROXY - v2'
 
 Outputs:
   ApiGatewayUrl:
