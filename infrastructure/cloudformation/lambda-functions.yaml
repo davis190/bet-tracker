@@ -416,7 +416,6 @@ Resources:
       RestApiId: !Ref ApiGatewayId
       StageName: !Ref Environment
       Description: !Sub 'Deployment - OPTIONS methods use MOCK integration for CORS'
-      StageDescription: 'OPTIONS methods configured with MOCK integration - v3'
 
 Outputs:
   ApiGatewayUrl:
