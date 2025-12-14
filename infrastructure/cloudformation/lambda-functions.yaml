@@ -217,6 +217,8 @@ Resources:
       AuthorizationType: NONE
       Integration:
         Type: MOCK
+        RequestTemplates:
+          application/json: '{"statusCode": 200}'
         IntegrationResponses:
           - StatusCode: 200
             ResponseParameters:
@@ -271,6 +273,8 @@ Resources:
       AuthorizationType: NONE
       Integration:
         Type: MOCK
+        RequestTemplates:
+          application/json: '{"statusCode": 200}'
         IntegrationResponses:
           - StatusCode: 200
             ResponseParameters:
@@ -326,6 +330,8 @@ Resources:
       AuthorizationType: NONE
       Integration:
         Type: MOCK
+        RequestTemplates:
+          application/json: '{"statusCode": 200}'
         IntegrationResponses:
           - StatusCode: 200
             ResponseParameters:
