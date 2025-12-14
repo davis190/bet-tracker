@@ -97,7 +97,7 @@ Resources:
     Properties:
       FunctionName:
         Fn::Sub: ${ProjectName}-${Environment}-update-bet
-      CodeUri: s3://bet-tracker-prod-sam-artifacts-690641653089/5d897739f1b9574b8ed12c5634123c6a
+      CodeUri: s3://bet-tracker-prod-sam-artifacts-690641653089/076c6aec3f7e52dc2191a613ff381cf3
       Handler: lambda_function.lambda_handler
       Runtime: python3.12
       Timeout: 30
@@ -411,7 +411,7 @@ Resources:
       Action: lambda:InvokeFunction
       Principal: apigateway.amazonaws.com
       SourceArn:
-        Fn::Sub: arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiGatewayId}/*/*
+        Fn::Sub: arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiGatewayId}/${Environment}/*/*
     Metadata:
       SamResourceId: GetBetsPermission
   CreateBetPermission:
@@ -422,7 +422,7 @@ Resources:
       Action: lambda:InvokeFunction
       Principal: apigateway.amazonaws.com
       SourceArn:
-        Fn::Sub: arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiGatewayId}/*/*
+        Fn::Sub: arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiGatewayId}/${Environment}/*/*
     Metadata:
       SamResourceId: CreateBetPermission
   UpdateBetPermission:
@@ -433,7 +433,7 @@ Resources:
       Action: lambda:InvokeFunction
       Principal: apigateway.amazonaws.com
       SourceArn:
-        Fn::Sub: arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiGatewayId}/*/*
+        Fn::Sub: arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiGatewayId}/${Environment}/*/*
     Metadata:
       SamResourceId: UpdateBetPermission
   DeleteBetPermission:
@@ -444,7 +444,7 @@ Resources:
       Action: lambda:InvokeFunction
       Principal: apigateway.amazonaws.com
       SourceArn:
-        Fn::Sub: arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiGatewayId}/*/*
+        Fn::Sub: arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiGatewayId}/${Environment}/*/*
     Metadata:
       SamResourceId: DeleteBetPermission
   ClearWeekPermission:
@@ -455,7 +455,7 @@ Resources:
       Action: lambda:InvokeFunction
       Principal: apigateway.amazonaws.com
       SourceArn:
-        Fn::Sub: arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiGatewayId}/*/*
+        Fn::Sub: arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiGatewayId}/${Environment}/*/*
     Metadata:
       SamResourceId: ClearWeekPermission
   ApiGatewayDeployment:

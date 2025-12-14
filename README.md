@@ -56,7 +56,7 @@ After deployment, the script will output:
 After the infrastructure is deployed, create `frontend/.env.local` with values from the CloudFormation outputs:
 
 ```env
-VITE_API_ENDPOINT=https://your-api-id.execute-api.us-east-1.amazonaws.com/dev
+VITE_API_ENDPOINT=https://bets-api.claytondavis.dev
 VITE_COGNITO_USER_POOL_ID=your-user-pool-id
 VITE_COGNITO_CLIENT_ID=your-client-id
 VITE_AWS_REGION=us-east-1

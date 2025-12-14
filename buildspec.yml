@@ -61,41 +61,31 @@ phases:
       - sam build --template ${CODEBUILD_SRC_DIR}/template.yaml
       - echo "Setting up frontend environment variables..."
       - |
-        # Try to get custom domain URL first
+        # Try to get custom domain URL first from lambdas stack
         API_URL=$(aws cloudformation describe-stacks \
           --stack-name ${PROJECT_NAME}-${ENVIRONMENT}-lambdas \
           --query 'Stacks[0].Outputs[?OutputKey==`ApiGatewayCustomUrl`].OutputValue' \
           --output text \
           --region $AWS_REGION 2>/dev/null || echo "")
         
-        # If custom domain not found, try default API Gateway URL
-        if [ -z "$API_URL" ]; then
-          echo "Custom domain URL not found, trying default API Gateway URL..."
-          API_URL=$(aws cloudformation describe-stacks \
-            --stack-name ${PROJECT_NAME}-${ENVIRONMENT}-lambdas \
-            --query 'Stacks[0].Outputs[?OutputKey==`ApiGatewayUrl`].OutputValue' \
-            --output text \
-            --region $AWS_REGION 2>/dev/null || echo "")
-        fi
-        
-        # If API URL still not found, try to construct it from main stack API Gateway ID
-        if [ -z "$API_URL" ]; then
-          echo "API URL not found in lambda-functions stack, attempting to get from main stack..."
-          API_GATEWAY_ID=$(aws cloudformation describe-stacks \
+        # If custom domain not found in lambdas stack, try to get from main stack
+        if [ -z "$API_URL" ] || [ "$API_URL" == "None" ]; then
+          echo "Custom domain URL not found in lambdas stack, trying main stack..."
+          DOMAIN_NAME=$(aws cloudformation describe-stacks \
             --stack-name ${PROJECT_NAME}-${ENVIRONMENT}-main \
-            --query 'Stacks[0].Outputs[?OutputKey==`ApiGatewayId`].OutputValue' \
+            --query 'Stacks[0].Outputs[?OutputKey==`ApiGatewayDomainNameValue`].OutputValue' \
             --output text \
             --region $AWS_REGION 2>/dev/null || echo "")
           
-          if [ -n "$API_GATEWAY_ID" ]; then
-            API_URL="https://${API_GATEWAY_ID}.execute-api.${AWS_REGION}.amazonaws.com/${ENVIRONMENT}"
-            echo "Constructed API URL: $API_URL"
+          if [ -n "$DOMAIN_NAME" ] && [ "$DOMAIN_NAME" != "None" ]; then
+            API_URL="https://${DOMAIN_NAME}"
+            echo "Using custom domain from main stack: $API_URL"
           else
-            echo "WARNING: Could not determine API Gateway URL. Frontend may not work correctly."
+            echo "WARNING: Could not determine API Gateway custom domain URL. Frontend may not work correctly."
             API_URL=""
           fi
         else
-          echo "Using API URL: $API_URL"
+          echo "Using API URL from lambdas stack: $API_URL"
         fi
         
         # Export Vite environment variables

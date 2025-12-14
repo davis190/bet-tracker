@@ -173,12 +173,25 @@ sam deploy \
 # Change back to infrastructure directory
 cd infrastructure
 
-# Get API Gateway URL
+# Get API Gateway Custom Domain URL
 API_URL=$(aws cloudformation describe-stacks \
   --stack-name ${PROJECT_NAME}-${ENVIRONMENT}-lambdas \
-  --query 'Stacks[0].Outputs[?OutputKey==`ApiGatewayUrl`].OutputValue' \
+  --query 'Stacks[0].Outputs[?OutputKey==`ApiGatewayCustomUrl`].OutputValue' \
   --output text \
   --region ${REGION})
+  
+# If custom domain not found, try to get from main stack
+if [ -z "$API_URL" ] || [ "$API_URL" == "None" ]; then
+  echo "Custom domain URL not found in lambdas stack, trying main stack..."
+  API_URL=$(aws cloudformation describe-stacks \
+    --stack-name ${PROJECT_NAME}-${ENVIRONMENT}-main \
+    --query 'Stacks[0].Outputs[?OutputKey==`ApiGatewayDomainNameValue`].OutputValue' \
+    --output text \
+    --region ${REGION})
+  if [ -n "$API_URL" ] && [ "$API_URL" != "None" ]; then
+    API_URL="https://${API_URL}"
+  fi
+fi
 
 # Deploy CodeBuild stack
 echo "Deploying CodeBuild stack..."
