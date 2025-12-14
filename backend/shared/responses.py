@@ -23,7 +23,7 @@ def create_response(
     default_headers = {
         "Content-Type": "application/json",
         "Access-Control-Allow-Origin": "https://bets.claytondavis.dev",
-        "Access-Control-Allow-Headers": "Content-Type,Authorization",
+        "Access-Control-Allow-Headers": "*",
         "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS",
         "Access-Control-Allow-Credentials": "true",
     }
@@ -62,5 +62,15 @@ def error_response(
 
 def options_response() -> Dict[str, Any]:
     """Create an OPTIONS response for CORS preflight requests."""
-    return create_response(200, {})
+    # OPTIONS requests should have an empty body
+    return {
+        "statusCode": 200,
+        "headers": {
+            "Access-Control-Allow-Origin": "https://bets.claytondavis.dev",
+            "Access-Control-Allow-Headers": "*",
+            "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS",
+            "Access-Control-Allow-Credentials": "true",
+        },
+        "body": "",
+    }
 

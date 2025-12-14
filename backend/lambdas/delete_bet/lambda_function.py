@@ -17,7 +17,12 @@ from shared.dynamodb import get_bet_by_id, delete_bet
 def lambda_handler(event, context):
     """Handle DELETE /bets/{betId} request."""
     # Handle OPTIONS request for CORS preflight
-    if event.get("httpMethod") == "OPTIONS" or event.get("requestContext", {}).get("http", {}).get("method") == "OPTIONS":
+    http_method = (
+        event.get("httpMethod") 
+        or event.get("requestContext", {}).get("http", {}).get("method")
+        or event.get("requestContext", {}).get("httpMethod")
+    )
+    if http_method == "OPTIONS":
         return options_response()
     
     try:

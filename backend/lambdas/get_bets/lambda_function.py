@@ -21,7 +21,11 @@ def lambda_handler(event, context):
     print(f"Request context: {event.get('requestContext', {})}")
     
     # Handle OPTIONS request for CORS preflight
-    http_method = event.get("httpMethod") or event.get("requestContext", {}).get("http", {}).get("method")
+    http_method = (
+        event.get("httpMethod") 
+        or event.get("requestContext", {}).get("http", {}).get("method")
+        or event.get("requestContext", {}).get("httpMethod")
+    )
     if http_method == "OPTIONS":
         print("Handling OPTIONS request - returning CORS response")
         return options_response()

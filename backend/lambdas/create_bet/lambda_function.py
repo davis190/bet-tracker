@@ -19,7 +19,12 @@ from shared.bet_validator import validate_bet, validate_single_bet, validate_par
 def lambda_handler(event, context):
     """Handle POST /bets request."""
     # Handle OPTIONS request for CORS preflight
-    if event.get("httpMethod") == "OPTIONS" or event.get("requestContext", {}).get("http", {}).get("method") == "OPTIONS":
+    http_method = (
+        event.get("httpMethod") 
+        or event.get("requestContext", {}).get("http", {}).get("method")
+        or event.get("requestContext", {}).get("httpMethod")
+    )
+    if http_method == "OPTIONS":
         return options_response()
     
     try:
