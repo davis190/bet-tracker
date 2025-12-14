@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Bet, isSingleBet, isParlay } from '../../types/bet';
+import { Bet, isSingleBet, isParlay, BetLeg } from '../../types/bet';
 import { apiClient } from '../../services/api';
 import { formatDate } from '../../utils/week';
 
@@ -39,6 +39,22 @@ export const BetList: React.FC<BetListProps> = ({ refreshTrigger, onRefresh }) =
       onRefresh();
     } catch (err) {
       console.error('Failed to update bet:', err);
+    }
+  };
+
+  const handleLegStatusUpdate = async (betId: string, legIndex: number, legStatus: 'won' | 'lost' | 'pending', currentLegs: BetLeg[]) => {
+    try {
+      // Create updated legs array with the new status for the specific leg
+      const updatedLegs = currentLegs.map((leg, idx) => {
+        if (idx === legIndex) {
+          return { ...leg, status: legStatus };
+        }
+        return leg;
+      });
+      await apiClient.updateBet(betId, { legs: updatedLegs });
+      onRefresh();
+    } catch (err) {
+      console.error('Failed to update leg status:', err);
     }
   };
 
@@ -130,19 +146,61 @@ export const BetList: React.FC<BetListProps> = ({ refreshTrigger, onRefresh }) =
                   <div className="text-sm font-semibold text-green-600 dark:text-green-400">
                     Payout: ${bet.potentialPayout.toFixed(2)}
                   </div>
-                  <details className="mt-2">
+                  <details className="mt-2" open>
                     <summary className="text-sm cursor-pointer text-indigo-600 dark:text-indigo-400">
                       View Legs
                     </summary>
-                    <div className="mt-2 space-y-2 pl-4 border-l-2">
-                      {bet.legs.map((leg, idx) => (
-                        <div key={leg.id || idx} className="text-sm">
-                          <div>{leg.teams}</div>
-                          <div className="text-gray-600 dark:text-gray-400">
-                            {leg.betType}: {leg.selection} ({leg.odds > 0 ? '+' : ''}{leg.odds})
+                    <div className="mt-2 space-y-3 pl-4 border-l-2">
+                      {bet.legs.map((leg, idx) => {
+                        const legStatus = leg.status || 'pending';
+                        return (
+                          <div key={leg.id || idx} className="text-sm space-y-1">
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="flex-1">
+                                <div className="font-medium">{leg.teams}</div>
+                                <div className="text-gray-600 dark:text-gray-400">
+                                  {leg.betType}: {leg.selection} ({leg.odds > 0 ? '+' : ''}{leg.odds})
+                                </div>
+                              </div>
+                              <span className={`px-2 py-1 rounded text-xs font-semibold ${getStatusBadgeClass(legStatus)}`}>
+                                {legStatus.toUpperCase()}
+                              </span>
+                            </div>
+                            <div className="flex gap-1 mt-1">
+                              <button
+                                onClick={() => handleLegStatusUpdate(bet.betId, idx, 'won', bet.legs)}
+                                className={`px-2 py-1 text-xs rounded ${
+                                  legStatus === 'won'
+                                    ? 'bg-green-600 text-white'
+                                    : 'bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900 dark:text-green-200 dark:hover:bg-green-800'
+                                }`}
+                              >
+                                Won
+                              </button>
+                              <button
+                                onClick={() => handleLegStatusUpdate(bet.betId, idx, 'lost', bet.legs)}
+                                className={`px-2 py-1 text-xs rounded ${
+                                  legStatus === 'lost'
+                                    ? 'bg-red-600 text-white'
+                                    : 'bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900 dark:text-red-200 dark:hover:bg-red-800'
+                                }`}
+                              >
+                                Lost
+                              </button>
+                              <button
+                                onClick={() => handleLegStatusUpdate(bet.betId, idx, 'pending', bet.legs)}
+                                className={`px-2 py-1 text-xs rounded ${
+                                  legStatus === 'pending'
+                                    ? 'bg-yellow-600 text-white'
+                                    : 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200 dark:bg-yellow-900 dark:text-yellow-200 dark:hover:bg-yellow-800'
+                                }`}
+                              >
+                                Pending
+                              </button>
+                            </div>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </details>
                 </div>
