@@ -33,7 +33,7 @@ Resources:
     Properties:
       FunctionName:
         Fn::Sub: ${ProjectName}-${Environment}-get-bets
-      CodeUri: s3://bet-tracker-prod-sam-artifacts-690641653089/60601ac2cfc2b568770f0d195904aec3
+      CodeUri: s3://bet-tracker-prod-sam-artifacts-690641653089/715919596ec101d2c79a3c87afc62e0a
       Handler: lambda_function.lambda_handler
       Runtime: python3.12
       Timeout: 30
@@ -65,7 +65,7 @@ Resources:
     Properties:
       FunctionName:
         Fn::Sub: ${ProjectName}-${Environment}-create-bet
-      CodeUri: s3://bet-tracker-prod-sam-artifacts-690641653089/d321889b3086c2ca8ab4c28204592050
+      CodeUri: s3://bet-tracker-prod-sam-artifacts-690641653089/feece4af547588861b4a0685abee72ae
       Handler: lambda_function.lambda_handler
       Runtime: python3.12
       Timeout: 30
@@ -97,7 +97,7 @@ Resources:
     Properties:
       FunctionName:
         Fn::Sub: ${ProjectName}-${Environment}-update-bet
-      CodeUri: s3://bet-tracker-prod-sam-artifacts-690641653089/734ce3b2ecdc5399d0510d216aa412e7
+      CodeUri: s3://bet-tracker-prod-sam-artifacts-690641653089/5d897739f1b9574b8ed12c5634123c6a
       Handler: lambda_function.lambda_handler
       Runtime: python3.12
       Timeout: 30
@@ -129,7 +129,7 @@ Resources:
     Properties:
       FunctionName:
         Fn::Sub: ${ProjectName}-${Environment}-delete-bet
-      CodeUri: s3://bet-tracker-prod-sam-artifacts-690641653089/4e0631bdb5d8ae5cdbfa92bd8e81e721
+      CodeUri: s3://bet-tracker-prod-sam-artifacts-690641653089/1ea7dbb445735bc404ec5ec75e196eb3
       Handler: lambda_function.lambda_handler
       Runtime: python3.12
       Timeout: 30
@@ -161,7 +161,7 @@ Resources:
     Properties:
       FunctionName:
         Fn::Sub: ${ProjectName}-${Environment}-clear-week
-      CodeUri: s3://bet-tracker-prod-sam-artifacts-690641653089/ca54ccf2577843b2b91db816ec073554
+      CodeUri: s3://bet-tracker-prod-sam-artifacts-690641653089/357136f004fa5d2ce40bbe7b9b16dd4a
       Handler: lambda_function.lambda_handler
       Runtime: python3.12
       Timeout: 30
