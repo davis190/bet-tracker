@@ -217,6 +217,8 @@ Resources:
       AuthorizationType: NONE
       Integration:
         Type: MOCK
+        RequestTemplates:
+          application/json: '{"statusCode": 200}'
         IntegrationResponses:
           - StatusCode: 200
             ResponseParameters:
@@ -224,8 +226,6 @@ Resources:
               method.response.header.Access-Control-Allow-Headers: "'Content-Type,Authorization'"
               method.response.header.Access-Control-Allow-Methods: "'GET,POST,PUT,DELETE,OPTIONS'"
               method.response.header.Access-Control-Allow-Credentials: "'true'"
-        RequestTemplates:
-          application/json: '{"statusCode": 200}'
       MethodResponses:
         - StatusCode: 200
           ResponseParameters:
@@ -271,6 +271,8 @@ Resources:
       AuthorizationType: NONE
       Integration:
         Type: MOCK
+        RequestTemplates:
+          application/json: '{"statusCode": 200}'
         IntegrationResponses:
           - StatusCode: 200
             ResponseParameters:
@@ -278,8 +280,6 @@ Resources:
               method.response.header.Access-Control-Allow-Headers: "'Content-Type,Authorization'"
               method.response.header.Access-Control-Allow-Methods: "'GET,POST,PUT,DELETE,OPTIONS'"
               method.response.header.Access-Control-Allow-Credentials: "'true'"
-        RequestTemplates:
-          application/json: '{"statusCode": 200}'
       MethodResponses:
         - StatusCode: 200
           ResponseParameters:
@@ -326,6 +326,8 @@ Resources:
       AuthorizationType: NONE
       Integration:
         Type: MOCK
+        RequestTemplates:
+          application/json: '{"statusCode": 200}'
         IntegrationResponses:
           - StatusCode: 200
             ResponseParameters:
@@ -333,8 +335,6 @@ Resources:
               method.response.header.Access-Control-Allow-Headers: "'Content-Type,Authorization'"
               method.response.header.Access-Control-Allow-Methods: "'GET,POST,PUT,DELETE,OPTIONS'"
               method.response.header.Access-Control-Allow-Credentials: "'true'"
-        RequestTemplates:
-          application/json: '{"statusCode": 200}'
       MethodResponses:
         - StatusCode: 200
           ResponseParameters:
@@ -416,7 +416,7 @@ Resources:
       RestApiId: !Ref ApiGatewayId
       StageName: !Ref Environment
       Description: !Sub 'Deployment - OPTIONS methods use MOCK integration for CORS'
-      StageDescription: !Sub 'OPTIONS methods configured with MOCK integration - v3'
+      StageDescription: 'OPTIONS methods configured with MOCK integration - v3'
 
 Outputs:
   ApiGatewayUrl:
