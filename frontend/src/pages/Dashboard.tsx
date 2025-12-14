@@ -110,7 +110,7 @@ export const Dashboard: React.FC = () => {
                 <h3 className="text-xl md:text-2xl font-semibold mb-4">Parlays</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {parlays.map((bet) => (
-                    <ParlayCard key={bet.betId} bet={bet} />
+                    <ParlayCard key={bet.betId} bet={bet} onUpdate={loadBets} />
                   ))}
                 </div>
               </div>

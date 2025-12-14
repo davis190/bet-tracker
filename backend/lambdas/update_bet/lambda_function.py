@@ -49,6 +49,25 @@ def lambda_handler(event, context):
                     "INVALID_STATUS",
                 )
         
+        # Validate legs if provided (for parlays)
+        if "legs" in updates:
+            if not isinstance(updates["legs"], list):
+                return error_response("Legs must be a list", 400, "INVALID_LEGS")
+            
+            valid_statuses = ["pending", "won", "lost"]
+            for i, leg in enumerate(updates["legs"]):
+                if not isinstance(leg, dict):
+                    return error_response(f"Leg {i+1} must be an object", 400, "INVALID_LEG")
+                
+                # Validate leg status if provided
+                if "status" in leg:
+                    if leg["status"] not in valid_statuses:
+                        return error_response(
+                            f"Leg {i+1}: Invalid status. Must be one of: {', '.join(valid_statuses)}",
+                            400,
+                            "INVALID_LEG_STATUS",
+                        )
+        
         # Update bet
         updated_bet = update_bet(user_id, bet_id, updates)
         

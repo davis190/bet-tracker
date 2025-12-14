@@ -9,6 +9,7 @@ export interface BetLeg {
   betType: BetLegBetType;
   selection: string;
   odds: number;
+  status?: BetStatus; // Optional, defaults to 'pending' if not set
 }
 
 export interface SingleBet {
