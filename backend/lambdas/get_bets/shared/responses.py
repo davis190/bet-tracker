@@ -32,7 +32,7 @@ def create_response(
         default_headers.update(headers)
     
     return {
-        "status_code": status_code,
+        "statusCode": status_code,
         "headers": default_headers,
         "body": json.dumps(body),
     }
