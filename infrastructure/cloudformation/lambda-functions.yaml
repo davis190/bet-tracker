@@ -357,6 +357,7 @@ Resources:
       SourceArn: !Sub 'arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiGatewayId}/${Environment}/*/*'
 
   # API Gateway Deployment
+  # Note: Description includes timestamp to force new deployment when methods change
   ApiGatewayDeployment:
     Type: AWS::ApiGateway::Deployment
     DependsOn:
@@ -371,6 +372,7 @@ Resources:
     Properties:
       RestApiId: !Ref ApiGatewayId
       StageName: !Ref Environment
+      Description: !Sub 'Deployment - OPTIONS methods use AWS_PROXY integration'
 
 Outputs:
   ApiGatewayUrl:
