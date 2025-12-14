@@ -316,13 +316,14 @@ Resources:
         Uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ClearWeekFunction.Arn}/invocations'
 
   # Lambda Permissions
+  # GetBetsPermission allows API Gateway to invoke GetBetsFunction for all methods including OPTIONS
   GetBetsPermission:
     Type: AWS::Lambda::Permission
     Properties:
       FunctionName: !Ref GetBetsFunction
       Action: lambda:InvokeFunction
       Principal: apigateway.amazonaws.com
-      SourceArn: !Sub 'arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiGatewayId}/${Environment}/*/*'
+      SourceArn: !Sub 'arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiGatewayId}/*/*'
 
   CreateBetPermission:
     Type: AWS::Lambda::Permission
@@ -338,7 +339,7 @@ Resources:
       FunctionName: !Ref UpdateBetFunction
       Action: lambda:InvokeFunction
       Principal: apigateway.amazonaws.com
-      SourceArn: !Sub 'arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiGatewayId}/${Environment}/*/*'
+      SourceArn: !Sub 'arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiGatewayId}/*/*'
 
   DeleteBetPermission:
     Type: AWS::Lambda::Permission
@@ -354,7 +355,7 @@ Resources:
       FunctionName: !Ref ClearWeekFunction
       Action: lambda:InvokeFunction
       Principal: apigateway.amazonaws.com
-      SourceArn: !Sub 'arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiGatewayId}/${Environment}/*/*'
+      SourceArn: !Sub 'arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiGatewayId}/*/*'
 
   # API Gateway Deployment
   # Note: Description includes timestamp to force new deployment when methods change
