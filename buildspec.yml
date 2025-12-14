@@ -92,9 +92,30 @@ phases:
         echo "API Gateway ID: $API_GATEWAY_ID"
         echo "API Root Resource ID: $API_ROOT_ID"
         echo "Authorizer ID: $AUTHORIZER_ID"
-      - echo "Building Lambda functions with SAM..."
+      - echo "Validating SAM template..."
       - cd ${CODEBUILD_SRC_DIR}
-      - sam build --template ${CODEBUILD_SRC_DIR}/infrastructure/cloudformation/lambda-functions.yaml
+      - sam validate --template infrastructure/cloudformation/lambda-functions.yaml
+      - echo "Building Lambda functions with SAM..."
+      - |
+        sam build --template infrastructure/cloudformation/lambda-functions.yaml --build-dir .aws-sam/build
+        BUILD_EXIT_CODE=$?
+        if [ $BUILD_EXIT_CODE -ne 0 ]; then
+          echo "ERROR: SAM build failed with exit code $BUILD_EXIT_CODE"
+          echo "Checking if template file exists:"
+          ls -la infrastructure/cloudformation/lambda-functions.yaml || echo "Template file not found"
+          exit 1
+        fi
+        echo "SAM build completed successfully"
+        echo "Checking build output directory..."
+        if [ -d ".aws-sam/build" ]; then
+          echo "Build directory exists. Contents:"
+          ls -la .aws-sam/build/
+          echo "Searching for YAML files:"
+          find .aws-sam/build -name "*.yaml" -type f
+        else
+          echo "ERROR: Build directory .aws-sam/build does not exist"
+          exit 1
+        fi
       - echo "Setting up frontend environment variables..."
       - |
         # Try to get custom domain URL first from lambdas stack
@@ -145,19 +166,27 @@ phases:
       - cd ${CODEBUILD_SRC_DIR}
       - echo "Packaging Lambda functions with SAM..."
       - |
+        echo "Packaging Lambda functions with SAM..."
+        cd ${CODEBUILD_SRC_DIR}
         # SAM build creates the template as template.yaml in the build directory
-        BUILT_TEMPLATE="${CODEBUILD_SRC_DIR}/.aws-sam/build/template.yaml"
+        BUILT_TEMPLATE=".aws-sam/build/template.yaml"
         if [ ! -f "$BUILT_TEMPLATE" ]; then
           echo "Built template not found at $BUILT_TEMPLATE, searching..."
-          BUILT_TEMPLATE=$(find ${CODEBUILD_SRC_DIR}/.aws-sam/build -name "*.yaml" -type f | head -1)
+          echo "Contents of .aws-sam/build:"
+          ls -la .aws-sam/build/ 2>/dev/null || echo "Build directory does not exist"
+          echo "Searching for YAML files..."
+          BUILT_TEMPLATE=$(find .aws-sam/build -name "*.yaml" -type f 2>/dev/null | head -1)
           if [ -z "$BUILT_TEMPLATE" ]; then
             echo "ERROR: Could not find built template in .aws-sam/build/"
+            echo "Searching entire .aws-sam directory..."
+            find .aws-sam -name "*.yaml" -type f 2>/dev/null || echo "No YAML files found"
             exit 1
           fi
           echo "Found template at: $BUILT_TEMPLATE"
+        else
+          echo "Using template at: $BUILT_TEMPLATE"
         fi
-        echo "Packaging Lambda functions with SAM..."
-        sam package --template-file "$BUILT_TEMPLATE" --s3-bucket $SAM_BUCKET --output-template-file ${CODEBUILD_SRC_DIR}/packaged.yaml --region $AWS_REGION
+        sam package --template-file "$BUILT_TEMPLATE" --s3-bucket $SAM_BUCKET --output-template-file packaged.yaml --region $AWS_REGION
       - echo "Deploying Lambda functions with SAM..."
       - sam deploy --template-file ${CODEBUILD_SRC_DIR}/packaged.yaml --stack-name ${PROJECT_NAME}-${ENVIRONMENT}-lambdas --capabilities CAPABILITY_IAM --parameter-overrides Environment=$ENVIRONMENT ProjectName=$PROJECT_NAME ApiGatewayId=$API_GATEWAY_ID ApiGatewayRootResourceId=$API_ROOT_ID AuthorizerId=$AUTHORIZER_ID BetsTableName=$BETS_TABLE_NAME UserPoolId=$USER_POOL_ID --region $AWS_REGION --no-fail-on-empty-changeset
       - echo "Deploying frontend to S3..."
