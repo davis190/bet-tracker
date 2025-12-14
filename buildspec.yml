@@ -56,9 +56,45 @@ phases:
             cp ${CODEBUILD_SRC_DIR}/backend/requirements.txt "$lambda_dir/requirements.txt"
           fi
         done
+      - echo "Fetching API Gateway parameters from main stack..."
+      - |
+        API_GATEWAY_ID=$(aws cloudformation describe-stacks \
+          --stack-name ${PROJECT_NAME}-${ENVIRONMENT}-main \
+          --query 'Stacks[0].Outputs[?OutputKey==`ApiGatewayId`].OutputValue' \
+          --output text \
+          --region $AWS_REGION 2>/dev/null || echo "")
+        
+        API_ROOT_ID=$(aws cloudformation describe-stacks \
+          --stack-name ${PROJECT_NAME}-${ENVIRONMENT}-main \
+          --query 'Stacks[0].Outputs[?OutputKey==`ApiGatewayRootResourceId`].OutputValue' \
+          --output text \
+          --region $AWS_REGION 2>/dev/null || echo "")
+        
+        AUTHORIZER_ID=$(aws cloudformation describe-stacks \
+          --stack-name ${PROJECT_NAME}-${ENVIRONMENT}-main \
+          --query 'Stacks[0].Outputs[?OutputKey==`CognitoAuthorizerId`].OutputValue' \
+          --output text \
+          --region $AWS_REGION 2>/dev/null || echo "")
+        
+        if [ -z "$API_GATEWAY_ID" ] || [ "$API_GATEWAY_ID" == "None" ]; then
+          echo "ERROR: Could not retrieve ApiGatewayId from main stack"
+          exit 1
+        fi
+        if [ -z "$API_ROOT_ID" ] || [ "$API_ROOT_ID" == "None" ]; then
+          echo "ERROR: Could not retrieve ApiGatewayRootResourceId from main stack"
+          exit 1
+        fi
+        if [ -z "$AUTHORIZER_ID" ] || [ "$AUTHORIZER_ID" == "None" ]; then
+          echo "ERROR: Could not retrieve CognitoAuthorizerId from main stack"
+          exit 1
+        fi
+        
+        echo "API Gateway ID: $API_GATEWAY_ID"
+        echo "API Root Resource ID: $API_ROOT_ID"
+        echo "Authorizer ID: $AUTHORIZER_ID"
       - echo "Building Lambda functions with SAM..."
       - cd ${CODEBUILD_SRC_DIR}
-      - sam build --template ${CODEBUILD_SRC_DIR}/template.yaml
+      - sam build --template ${CODEBUILD_SRC_DIR}/infrastructure/cloudformation/lambda-functions.yaml
       - echo "Setting up frontend environment variables..."
       - |
         # Try to get custom domain URL first from lambdas stack
@@ -108,9 +144,22 @@ phases:
     commands:
       - cd ${CODEBUILD_SRC_DIR}
       - echo "Packaging Lambda functions with SAM..."
-      - sam package --template-file ${CODEBUILD_SRC_DIR}/.aws-sam/build/template.yaml --s3-bucket $SAM_BUCKET --output-template-file ${CODEBUILD_SRC_DIR}/packaged.yaml --region $AWS_REGION
+      - |
+        # SAM build creates the template as template.yaml in the build directory
+        BUILT_TEMPLATE="${CODEBUILD_SRC_DIR}/.aws-sam/build/template.yaml"
+        if [ ! -f "$BUILT_TEMPLATE" ]; then
+          echo "Built template not found at $BUILT_TEMPLATE, searching..."
+          BUILT_TEMPLATE=$(find ${CODEBUILD_SRC_DIR}/.aws-sam/build -name "*.yaml" -type f | head -1)
+          if [ -z "$BUILT_TEMPLATE" ]; then
+            echo "ERROR: Could not find built template in .aws-sam/build/"
+            exit 1
+          fi
+          echo "Found template at: $BUILT_TEMPLATE"
+        fi
+        echo "Packaging Lambda functions with SAM..."
+        sam package --template-file "$BUILT_TEMPLATE" --s3-bucket $SAM_BUCKET --output-template-file ${CODEBUILD_SRC_DIR}/packaged.yaml --region $AWS_REGION
       - echo "Deploying Lambda functions with SAM..."
-      - sam deploy --template-file ${CODEBUILD_SRC_DIR}/packaged.yaml --stack-name ${PROJECT_NAME}-${ENVIRONMENT}-lambdas --capabilities CAPABILITY_IAM --parameter-overrides Environment=$ENVIRONMENT ProjectName=$PROJECT_NAME BetsTableName=$BETS_TABLE_NAME UserPoolId=$USER_POOL_ID --region $AWS_REGION --no-fail-on-empty-changeset
+      - sam deploy --template-file ${CODEBUILD_SRC_DIR}/packaged.yaml --stack-name ${PROJECT_NAME}-${ENVIRONMENT}-lambdas --capabilities CAPABILITY_IAM --parameter-overrides Environment=$ENVIRONMENT ProjectName=$PROJECT_NAME ApiGatewayId=$API_GATEWAY_ID ApiGatewayRootResourceId=$API_ROOT_ID AuthorizerId=$AUTHORIZER_ID BetsTableName=$BETS_TABLE_NAME UserPoolId=$USER_POOL_ID --region $AWS_REGION --no-fail-on-empty-changeset
       - echo "Deploying frontend to S3..."
       - aws s3 sync ${CODEBUILD_SRC_DIR}/frontend/dist s3://$FRONTEND_BUCKET --delete
       - echo "Invalidating CloudFront cache..."
