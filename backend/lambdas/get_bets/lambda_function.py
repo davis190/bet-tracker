@@ -9,13 +9,17 @@ shared_path = os.path.join(os.path.dirname(__file__), '..', '..', 'shared')
 if os.path.exists(shared_path):
     sys.path.insert(0, shared_path)
 
-from shared.responses import success_response, error_response
+from shared.responses import success_response, error_response, options_response
 from shared.auth import get_user_id_from_event
 from shared.dynamodb import get_bets_by_user, get_all_bets
 
 
 def lambda_handler(event, context):
     """Handle GET /bets request."""
+    # Handle OPTIONS request for CORS preflight
+    if event.get("httpMethod") == "OPTIONS" or event.get("requestContext", {}).get("http", {}).get("method") == "OPTIONS":
+        return options_response()
+    
     try:
         # Get user ID from event (may be None for public access)
         user_id = get_user_id_from_event(event)

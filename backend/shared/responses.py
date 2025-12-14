@@ -59,3 +59,8 @@ def error_response(
     
     return create_response(status_code, body)
 
+
+def options_response() -> Dict[str, Any]:
+    """Create an OPTIONS response for CORS preflight requests."""
+    return create_response(200, {})
+
