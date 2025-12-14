@@ -71,6 +71,6 @@ def options_response() -> Dict[str, Any]:
             "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS",
             "Access-Control-Allow-Credentials": "true",
         },
-        "body": "",
+        "body": "{}",
     }
 
