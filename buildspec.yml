@@ -94,28 +94,51 @@ phases:
         echo "Authorizer ID: $AUTHORIZER_ID"
       - echo "Validating SAM template..."
       - cd ${CODEBUILD_SRC_DIR}
-      - sam validate --template infrastructure/cloudformation/lambda-functions.yaml
+      - |
+        echo "Current directory: $(pwd)"
+        echo "Checking template file exists:"
+        ls -la infrastructure/cloudformation/lambda-functions.yaml || echo "Template file not found"
+        echo "Verifying Lambda code paths exist:"
+        ls -la backend/lambdas/get_bets/ || echo "get_bets directory not found"
+        sam validate --template infrastructure/cloudformation/lambda-functions.yaml
       - echo "Building Lambda functions with SAM..."
       - |
-        sam build --template infrastructure/cloudformation/lambda-functions.yaml --build-dir .aws-sam/build
+        echo "Current directory: $(pwd)"
+        # Check if we need to use container (for Python 3.12 runtime)
+        USE_CONTAINER=""
+        if ! command -v python3.12 &> /dev/null; then
+          echo "python3.12 not found, will use --use-container flag"
+          USE_CONTAINER="--use-container"
+        fi
+        echo "Running SAM build..."
+        sam build --template infrastructure/cloudformation/lambda-functions.yaml --build-dir .aws-sam/build ${USE_CONTAINER}
         BUILD_EXIT_CODE=$?
+        echo "SAM build exit code: $BUILD_EXIT_CODE"
         if [ $BUILD_EXIT_CODE -ne 0 ]; then
           echo "ERROR: SAM build failed with exit code $BUILD_EXIT_CODE"
-          echo "Checking if template file exists:"
-          ls -la infrastructure/cloudformation/lambda-functions.yaml || echo "Template file not found"
           exit 1
         fi
         echo "SAM build completed successfully"
         echo "Checking build output directory..."
         if [ -d ".aws-sam/build" ]; then
-          echo "Build directory exists. Contents:"
-          ls -la .aws-sam/build/
+          echo "Build directory exists. Full contents:"
+          ls -laR .aws-sam/build/ || echo "Cannot list build directory"
           echo "Searching for YAML files:"
-          find .aws-sam/build -name "*.yaml" -type f
+          find .aws-sam/build -name "*.yaml" -type f || echo "No YAML files found"
+          echo "Searching for any files:"
+          find .aws-sam/build -type f || echo "No files found in build directory"
         else
           echo "ERROR: Build directory .aws-sam/build does not exist"
           exit 1
         fi
+        # Verify template.yaml exists
+        if [ ! -f ".aws-sam/build/template.yaml" ]; then
+          echo "ERROR: template.yaml not found in build directory after SAM build"
+          echo "This usually means SAM build didn't process any resources"
+          echo "Checking SAM build logs..."
+          exit 1
+        fi
+        echo "✓ template.yaml found successfully"
       - echo "Setting up frontend environment variables..."
       - |
         # Try to get custom domain URL first from lambdas stack

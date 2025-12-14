@@ -206,7 +206,7 @@ cat > "$PATCH_OPS_FILE" <<'PATCHEOF'
     "path": "/accessLogSettings/format",
     "value": "{\"requestId\":\"$context.requestId\",\"ip\":\"$context.identity.sourceIp\",\"requestTime\":\"$context.requestTime\",\"httpMethod\":\"$context.httpMethod\",\"routeKey\":\"$context.routeKey\",\"status\":\"$context.status\",\"protocol\":\"$context.protocol\",\"responseLength\":\"$context.responseLength\",\"error.message\":\"$context.error.message\",\"error.messageString\":\"$context.error.messageString\",\"integration.error\":\"$context.integration.error\",\"integration.status\":\"$context.integration.status\"}"
   }
-]
+]q
 PATCHEOF
 
 # Replace placeholder with actual ARN
