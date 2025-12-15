@@ -4,6 +4,7 @@ import { BetForm } from '../components/admin/BetForm';
 import { ParlayForm } from '../components/admin/ParlayForm';
 import { BetList } from '../components/admin/BetList';
 import { ClearWeekButton } from '../components/admin/ClearWeekButton';
+import { BetSlipImport } from '../components/admin/BetSlipImport';
 import { useNavigate } from 'react-router-dom';
 
 export const Admin: React.FC = () => {
@@ -71,37 +72,41 @@ export const Admin: React.FC = () => {
         </div>
 
         {activeTab === 'add' && (
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-            <div className="mb-4">
-              <div className="flex gap-4">
-                <button
-                  onClick={() => setBetType('single')}
-                  className={`px-4 py-2 rounded ${
-                    betType === 'single'
-                      ? 'bg-indigo-600 text-white'
-                      : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
-                  }`}
-                >
-                  Single Bet
-                </button>
-                <button
-                  onClick={() => setBetType('parlay')}
-                  className={`px-4 py-2 rounded ${
-                    betType === 'parlay'
-                      ? 'bg-indigo-600 text-white'
-                      : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
-                  }`}
-                >
-                  Parlay
-                </button>
+          <div className="space-y-6">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+              <div className="mb-4">
+                <div className="flex gap-4">
+                  <button
+                    onClick={() => setBetType('single')}
+                    className={`px-4 py-2 rounded ${
+                      betType === 'single'
+                        ? 'bg-indigo-600 text-white'
+                        : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
+                    }`}
+                  >
+                    Single Bet
+                  </button>
+                  <button
+                    onClick={() => setBetType('parlay')}
+                    className={`px-4 py-2 rounded ${
+                      betType === 'parlay'
+                        ? 'bg-indigo-600 text-white'
+                        : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
+                    }`}
+                  >
+                    Parlay
+                  </button>
+                </div>
               </div>
+
+              {betType === 'single' ? (
+                <BetForm onSuccess={handleSuccess} />
+              ) : (
+                <ParlayForm onSuccess={handleSuccess} />
+              )}
             </div>
 
-            {betType === 'single' ? (
-              <BetForm onSuccess={handleSuccess} />
-            ) : (
-              <ParlayForm onSuccess={handleSuccess} />
-            )}
+            <BetSlipImport onImported={handleSuccess} />
           </div>
         )}
 

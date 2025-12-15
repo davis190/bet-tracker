@@ -79,3 +79,9 @@ export interface CreateParlayRequest {
 
 export type CreateBetRequest = CreateSingleBetRequest | CreateParlayRequest;
 
+// Types for bets extracted from a bet slip image via Bedrock
+export type ExtractedSingleBet = CreateSingleBetRequest;
+export type ExtractedParlayBet = CreateParlayRequest;
+export type ExtractedBet = ExtractedSingleBet | ExtractedParlayBet;
+
+

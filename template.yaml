@@ -140,6 +140,21 @@ Resources:
                 - !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${BetsTableName}'
                 - !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${BetsTableName}/index/*'
 
+  ProcessBetSlipFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub '${ProjectName}-${Environment}-process-betslip'
+      CodeUri: backend/lambdas/process_betslip/
+      Handler: lambda_function.lambda_handler
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - bedrock:InvokeModel
+              Resource: '*'
+
 Outputs:
   GetBetsFunctionArn:
     Description: Get Bets Lambda Function ARN

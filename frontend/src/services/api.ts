@@ -1,7 +1,7 @@
 import axios, { AxiosInstance } from 'axios';
 import { config } from './config';
 import { authService } from './auth';
-import { Bet, CreateBetRequest, BetLeg } from '../types/bet';
+import { Bet, CreateBetRequest, BetLeg, ExtractedBet } from '../types/bet';
 
 class ApiClient {
   private client: AxiosInstance;
@@ -55,6 +55,14 @@ class ApiClient {
 
   async clearWeek(): Promise<{ deletedCount: number }> {
     const response = await this.client.delete('/bets/week/clear');
+    return response.data.data;
+  }
+
+  async processBetSlip(imageBase64: string): Promise<{
+    bets: ExtractedBet[];
+    warnings?: string[];
+  }> {
+    const response = await this.client.post('/betslip/process', { imageBase64 });
     return response.data.data;
   }
 }

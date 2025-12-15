@@ -108,8 +108,14 @@ def create_bet(user_id: str, bet_data: Dict[str, Any]) -> Dict[str, Any]:
             "selection": bet_data["selection"],
             "odds": float_to_decimal(bet_data["odds"]),
         })
+        # Add attributedTo if present
+        if "attributedTo" in bet_data and bet_data["attributedTo"]:
+            item["attributedTo"] = bet_data["attributedTo"]
     else:  # parlay
         item["legs"] = float_to_decimal(bet_data["legs"])
+        # Add attributedTo if present (for the whole parlay)
+        if "attributedTo" in bet_data and bet_data["attributedTo"]:
+            item["attributedTo"] = bet_data["attributedTo"]
     
     # Convert entire item to ensure all floats are Decimal before writing to DynamoDB
     item = float_to_decimal(item)

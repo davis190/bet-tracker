@@ -1,0 +1,3 @@
+# Dependencies are installed from backend/requirements.txt
+
+

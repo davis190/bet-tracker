@@ -1,0 +1,800 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Lambda functions and API Gateway integrations for Bet Tracker App
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues:
+    - dev
+    - staging
+    - prod
+  ProjectName:
+    Type: String
+    Default: bet-tracker
+  ApiGatewayId:
+    Type: String
+    Description: API Gateway Rest API ID
+  ApiGatewayRootResourceId:
+    Type: String
+    Description: API Gateway Root Resource ID
+  AuthorizerId:
+    Type: String
+    Description: Cognito Authorizer ID
+  BetsTableName:
+    Type: String
+    Description: DynamoDB Bets Table Name
+  UserPoolId:
+    Type: String
+    Description: Cognito User Pool ID
+Resources:
+  GetBetsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName:
+        Fn::Sub: ${ProjectName}-${Environment}-get-bets
+      CodeUri: s3://bet-tracker-prod-sam-artifacts-690641653089/f3da58ada16236eece6afcaf4e4402ec
+      Handler: lambda_function.lambda_handler
+      Runtime: python3.12
+      Timeout: 30
+      Environment:
+        Variables:
+          BETS_TABLE_NAME:
+            Ref: BetsTableName
+          COGNITO_USER_POOL_ID:
+            Ref: UserPoolId
+      Policies:
+      - AWSLambdaBasicExecutionRole
+      - Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Action:
+          - dynamodb:PutItem
+          - dynamodb:GetItem
+          - dynamodb:UpdateItem
+          - dynamodb:DeleteItem
+          - dynamodb:Query
+          - dynamodb:Scan
+          Resource:
+          - Fn::Sub: arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${BetsTableName}
+          - Fn::Sub: arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${BetsTableName}/index/*
+    Metadata:
+      SamResourceId: GetBetsFunction
+  CreateBetFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName:
+        Fn::Sub: ${ProjectName}-${Environment}-create-bet
+      CodeUri: s3://bet-tracker-prod-sam-artifacts-690641653089/c17231cd4d12f83792ba68bbb9e385aa
+      Handler: lambda_function.lambda_handler
+      Runtime: python3.12
+      Timeout: 30
+      Environment:
+        Variables:
+          BETS_TABLE_NAME:
+            Ref: BetsTableName
+          COGNITO_USER_POOL_ID:
+            Ref: UserPoolId
+      Policies:
+      - AWSLambdaBasicExecutionRole
+      - Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Action:
+          - dynamodb:PutItem
+          - dynamodb:GetItem
+          - dynamodb:UpdateItem
+          - dynamodb:DeleteItem
+          - dynamodb:Query
+          - dynamodb:Scan
+          Resource:
+          - Fn::Sub: arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${BetsTableName}
+          - Fn::Sub: arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${BetsTableName}/index/*
+    Metadata:
+      SamResourceId: CreateBetFunction
+  UpdateBetFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName:
+        Fn::Sub: ${ProjectName}-${Environment}-update-bet
+      CodeUri: s3://bet-tracker-prod-sam-artifacts-690641653089/0def4f503999c6a1d8ca5c31cbeeba8e
+      Handler: lambda_function.lambda_handler
+      Runtime: python3.12
+      Timeout: 30
+      Environment:
+        Variables:
+          BETS_TABLE_NAME:
+            Ref: BetsTableName
+          COGNITO_USER_POOL_ID:
+            Ref: UserPoolId
+      Policies:
+      - AWSLambdaBasicExecutionRole
+      - Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Action:
+          - dynamodb:PutItem
+          - dynamodb:GetItem
+          - dynamodb:UpdateItem
+          - dynamodb:DeleteItem
+          - dynamodb:Query
+          - dynamodb:Scan
+          Resource:
+          - Fn::Sub: arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${BetsTableName}
+          - Fn::Sub: arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${BetsTableName}/index/*
+    Metadata:
+      SamResourceId: UpdateBetFunction
+  DeleteBetFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName:
+        Fn::Sub: ${ProjectName}-${Environment}-delete-bet
+      CodeUri: s3://bet-tracker-prod-sam-artifacts-690641653089/74f761935dbaaf8b6bc35900dba256d3
+      Handler: lambda_function.lambda_handler
+      Runtime: python3.12
+      Timeout: 30
+      Environment:
+        Variables:
+          BETS_TABLE_NAME:
+            Ref: BetsTableName
+          COGNITO_USER_POOL_ID:
+            Ref: UserPoolId
+      Policies:
+      - AWSLambdaBasicExecutionRole
+      - Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Action:
+          - dynamodb:PutItem
+          - dynamodb:GetItem
+          - dynamodb:UpdateItem
+          - dynamodb:DeleteItem
+          - dynamodb:Query
+          - dynamodb:Scan
+          Resource:
+          - Fn::Sub: arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${BetsTableName}
+          - Fn::Sub: arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${BetsTableName}/index/*
+    Metadata:
+      SamResourceId: DeleteBetFunction
+  ClearWeekFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName:
+        Fn::Sub: ${ProjectName}-${Environment}-clear-week
+      CodeUri: s3://bet-tracker-prod-sam-artifacts-690641653089/dad7a4be7c4ab89d26f6127501c86a05
+      Handler: lambda_function.lambda_handler
+      Runtime: python3.12
+      Timeout: 30
+      Environment:
+        Variables:
+          BETS_TABLE_NAME:
+            Ref: BetsTableName
+          COGNITO_USER_POOL_ID:
+            Ref: UserPoolId
+      Policies:
+      - AWSLambdaBasicExecutionRole
+      - Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Action:
+          - dynamodb:PutItem
+          - dynamodb:GetItem
+          - dynamodb:UpdateItem
+          - dynamodb:DeleteItem
+          - dynamodb:Query
+          - dynamodb:Scan
+          Resource:
+          - Fn::Sub: arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${BetsTableName}
+          - Fn::Sub: arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${BetsTableName}/index/*
+    Metadata:
+      SamResourceId: ClearWeekFunction
+  ProcessBetSlipFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName:
+        Fn::Sub: ${ProjectName}-${Environment}-process-betslip
+      CodeUri: s3://bet-tracker-prod-sam-artifacts-690641653089/3c7cf6c015a284a6aee7e04317cf8add
+      Handler: lambda_function.lambda_handler
+      Runtime: python3.12
+      Timeout: 60
+      Environment:
+        Variables:
+          BETS_TABLE_NAME:
+            Ref: BetsTableName
+          COGNITO_USER_POOL_ID:
+            Ref: UserPoolId
+          BEDROCK_MODEL_ID: amazon.nova-pro-v1:0
+      Policies:
+      - AWSLambdaBasicExecutionRole
+      - Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Action:
+          - bedrock:InvokeModel
+          Resource: '*'
+    Metadata:
+      SamResourceId: ProcessBetSlipFunction
+  BetsResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId:
+        Ref: ApiGatewayId
+      ParentId:
+        Ref: ApiGatewayRootResourceId
+      PathPart: bets
+    Metadata:
+      SamResourceId: BetsResource
+  BetByIdResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId:
+        Ref: ApiGatewayId
+      ParentId:
+        Ref: BetsResource
+      PathPart: '{betId}'
+    Metadata:
+      SamResourceId: BetByIdResource
+  WeekResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId:
+        Ref: ApiGatewayId
+      ParentId:
+        Ref: BetsResource
+      PathPart: week
+    Metadata:
+      SamResourceId: WeekResource
+  BetSlipResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId:
+        Ref: ApiGatewayId
+      ParentId:
+        Ref: ApiGatewayRootResourceId
+      PathPart: betslip
+    Metadata:
+      SamResourceId: BetSlipResource
+  BetSlipProcessResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId:
+        Ref: ApiGatewayId
+      ParentId:
+        Ref: BetSlipResource
+      PathPart: process
+    Metadata:
+      SamResourceId: BetSlipProcessResource
+  ClearResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId:
+        Ref: ApiGatewayId
+      ParentId:
+        Ref: WeekResource
+      PathPart: clear
+    Metadata:
+      SamResourceId: ClearResource
+  GetBetsOptionsMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId:
+        Ref: ApiGatewayId
+      ResourceId:
+        Ref: BetsResource
+      HttpMethod: OPTIONS
+      AuthorizationType: NONE
+      Integration:
+        Type: MOCK
+        RequestTemplates:
+          application/json: ''
+        IntegrationResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: '''https://bets.claytondavis.dev'''
+            method.response.header.Access-Control-Allow-Headers: '''Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'''
+            method.response.header.Access-Control-Allow-Methods: '''GET,POST,PUT,DELETE,OPTIONS'''
+            method.response.header.Access-Control-Allow-Credentials: '''true'''
+          ResponseTemplates:
+            application/json: ''
+      MethodResponses:
+      - StatusCode: 200
+        ResponseParameters:
+          method.response.header.Access-Control-Allow-Origin: true
+          method.response.header.Access-Control-Allow-Headers: true
+          method.response.header.Access-Control-Allow-Methods: true
+          method.response.header.Access-Control-Allow-Credentials: true
+    Metadata:
+      SamResourceId: GetBetsOptionsMethod
+  GetBetsMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId:
+        Ref: ApiGatewayId
+      ResourceId:
+        Ref: BetsResource
+      HttpMethod: GET
+      AuthorizationType: NONE
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${GetBetsFunction.Arn}/invocations
+      MethodResponses:
+      - StatusCode: 200
+        ResponseParameters:
+          method.response.header.Access-Control-Allow-Origin: true
+          method.response.header.Access-Control-Allow-Headers: true
+          method.response.header.Access-Control-Allow-Methods: true
+          method.response.header.Access-Control-Allow-Credentials: true
+      - StatusCode: 400
+        ResponseParameters:
+          method.response.header.Access-Control-Allow-Origin: true
+          method.response.header.Access-Control-Allow-Headers: true
+          method.response.header.Access-Control-Allow-Methods: true
+          method.response.header.Access-Control-Allow-Credentials: true
+      - StatusCode: 401
+        ResponseParameters:
+          method.response.header.Access-Control-Allow-Origin: true
+          method.response.header.Access-Control-Allow-Headers: true
+          method.response.header.Access-Control-Allow-Methods: true
+          method.response.header.Access-Control-Allow-Credentials: true
+      - StatusCode: 404
+        ResponseParameters:
+          method.response.header.Access-Control-Allow-Origin: true
+          method.response.header.Access-Control-Allow-Headers: true
+          method.response.header.Access-Control-Allow-Methods: true
+          method.response.header.Access-Control-Allow-Credentials: true
+      - StatusCode: 500
+        ResponseParameters:
+          method.response.header.Access-Control-Allow-Origin: true
+          method.response.header.Access-Control-Allow-Headers: true
+          method.response.header.Access-Control-Allow-Methods: true
+          method.response.header.Access-Control-Allow-Credentials: true
+    Metadata:
+      SamResourceId: GetBetsMethod
+  CreateBetMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId:
+        Ref: ApiGatewayId
+      ResourceId:
+        Ref: BetsResource
+      HttpMethod: POST
+      AuthorizationType: COGNITO_USER_POOLS
+      AuthorizerId:
+        Ref: AuthorizerId
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${CreateBetFunction.Arn}/invocations
+      MethodResponses:
+      - StatusCode: 200
+        ResponseParameters:
+          method.response.header.Access-Control-Allow-Origin: true
+          method.response.header.Access-Control-Allow-Headers: true
+          method.response.header.Access-Control-Allow-Methods: true
+          method.response.header.Access-Control-Allow-Credentials: true
+      - StatusCode: 201
+        ResponseParameters:
+          method.response.header.Access-Control-Allow-Origin: true
+          method.response.header.Access-Control-Allow-Headers: true
+          method.response.header.Access-Control-Allow-Methods: true
+          method.response.header.Access-Control-Allow-Credentials: true
+      - StatusCode: 400
+        ResponseParameters:
+          method.response.header.Access-Control-Allow-Origin: true
+          method.response.header.Access-Control-Allow-Headers: true
+          method.response.header.Access-Control-Allow-Methods: true
+          method.response.header.Access-Control-Allow-Credentials: true
+      - StatusCode: 401
+        ResponseParameters:
+          method.response.header.Access-Control-Allow-Origin: true
+          method.response.header.Access-Control-Allow-Headers: true
+          method.response.header.Access-Control-Allow-Methods: true
+          method.response.header.Access-Control-Allow-Credentials: true
+      - StatusCode: 404
+        ResponseParameters:
+          method.response.header.Access-Control-Allow-Origin: true
+          method.response.header.Access-Control-Allow-Headers: true
+          method.response.header.Access-Control-Allow-Methods: true
+          method.response.header.Access-Control-Allow-Credentials: true
+      - StatusCode: 500
+        ResponseParameters:
+          method.response.header.Access-Control-Allow-Origin: true
+          method.response.header.Access-Control-Allow-Headers: true
+          method.response.header.Access-Control-Allow-Methods: true
+          method.response.header.Access-Control-Allow-Credentials: true
+    Metadata:
+      SamResourceId: CreateBetMethod
+  BetByIdOptionsMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId:
+        Ref: ApiGatewayId
+      ResourceId:
+        Ref: BetByIdResource
+      HttpMethod: OPTIONS
+      AuthorizationType: NONE
+      Integration:
+        Type: MOCK
+        RequestTemplates:
+          application/json: ''
+        IntegrationResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: '''https://bets.claytondavis.dev'''
+            method.response.header.Access-Control-Allow-Headers: '''Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'''
+            method.response.header.Access-Control-Allow-Methods: '''GET,POST,PUT,DELETE,OPTIONS'''
+            method.response.header.Access-Control-Allow-Credentials: '''true'''
+          ResponseTemplates:
+            application/json: ''
+      MethodResponses:
+      - StatusCode: 200
+        ResponseParameters:
+          method.response.header.Access-Control-Allow-Origin: true
+          method.response.header.Access-Control-Allow-Headers: true
+          method.response.header.Access-Control-Allow-Methods: true
+          method.response.header.Access-Control-Allow-Credentials: true
+    Metadata:
+      SamResourceId: BetByIdOptionsMethod
+  UpdateBetMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId:
+        Ref: ApiGatewayId
+      ResourceId:
+        Ref: BetByIdResource
+      HttpMethod: PUT
+      AuthorizationType: COGNITO_USER_POOLS
+      AuthorizerId:
+        Ref: AuthorizerId
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${UpdateBetFunction.Arn}/invocations
+      MethodResponses:
+      - StatusCode: 200
+        ResponseParameters:
+          method.response.header.Access-Control-Allow-Origin: true
+          method.response.header.Access-Control-Allow-Headers: true
+          method.response.header.Access-Control-Allow-Methods: true
+          method.response.header.Access-Control-Allow-Credentials: true
+      - StatusCode: 400
+        ResponseParameters:
+          method.response.header.Access-Control-Allow-Origin: true
+          method.response.header.Access-Control-Allow-Headers: true
+          method.response.header.Access-Control-Allow-Methods: true
+          method.response.header.Access-Control-Allow-Credentials: true
+      - StatusCode: 401
+        ResponseParameters:
+          method.response.header.Access-Control-Allow-Origin: true
+          method.response.header.Access-Control-Allow-Headers: true
+          method.response.header.Access-Control-Allow-Methods: true
+          method.response.header.Access-Control-Allow-Credentials: true
+      - StatusCode: 404
+        ResponseParameters:
+          method.response.header.Access-Control-Allow-Origin: true
+          method.response.header.Access-Control-Allow-Headers: true
+          method.response.header.Access-Control-Allow-Methods: true
+          method.response.header.Access-Control-Allow-Credentials: true
+      - StatusCode: 500
+        ResponseParameters:
+          method.response.header.Access-Control-Allow-Origin: true
+          method.response.header.Access-Control-Allow-Headers: true
+          method.response.header.Access-Control-Allow-Methods: true
+          method.response.header.Access-Control-Allow-Credentials: true
+    Metadata:
+      SamResourceId: UpdateBetMethod
+  DeleteBetMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId:
+        Ref: ApiGatewayId
+      ResourceId:
+        Ref: BetByIdResource
+      HttpMethod: DELETE
+      AuthorizationType: COGNITO_USER_POOLS
+      AuthorizerId:
+        Ref: AuthorizerId
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${DeleteBetFunction.Arn}/invocations
+      MethodResponses:
+      - StatusCode: 200
+        ResponseParameters:
+          method.response.header.Access-Control-Allow-Origin: true
+          method.response.header.Access-Control-Allow-Headers: true
+          method.response.header.Access-Control-Allow-Methods: true
+          method.response.header.Access-Control-Allow-Credentials: true
+      - StatusCode: 400
+        ResponseParameters:
+          method.response.header.Access-Control-Allow-Origin: true
+          method.response.header.Access-Control-Allow-Headers: true
+          method.response.header.Access-Control-Allow-Methods: true
+          method.response.header.Access-Control-Allow-Credentials: true
+      - StatusCode: 401
+        ResponseParameters:
+          method.response.header.Access-Control-Allow-Origin: true
+          method.response.header.Access-Control-Allow-Headers: true
+          method.response.header.Access-Control-Allow-Methods: true
+          method.response.header.Access-Control-Allow-Credentials: true
+      - StatusCode: 404
+        ResponseParameters:
+          method.response.header.Access-Control-Allow-Origin: true
+          method.response.header.Access-Control-Allow-Headers: true
+          method.response.header.Access-Control-Allow-Methods: true
+          method.response.header.Access-Control-Allow-Credentials: true
+      - StatusCode: 500
+        ResponseParameters:
+          method.response.header.Access-Control-Allow-Origin: true
+          method.response.header.Access-Control-Allow-Headers: true
+          method.response.header.Access-Control-Allow-Methods: true
+          method.response.header.Access-Control-Allow-Credentials: true
+    Metadata:
+      SamResourceId: DeleteBetMethod
+  ClearWeekOptionsMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId:
+        Ref: ApiGatewayId
+      ResourceId:
+        Ref: ClearResource
+      HttpMethod: OPTIONS
+      AuthorizationType: NONE
+      Integration:
+        Type: MOCK
+        RequestTemplates:
+          application/json: ''
+        IntegrationResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: '''https://bets.claytondavis.dev'''
+            method.response.header.Access-Control-Allow-Headers: '''Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'''
+            method.response.header.Access-Control-Allow-Methods: '''GET,POST,PUT,DELETE,OPTIONS'''
+            method.response.header.Access-Control-Allow-Credentials: '''true'''
+          ResponseTemplates:
+            application/json: ''
+      MethodResponses:
+      - StatusCode: 200
+        ResponseParameters:
+          method.response.header.Access-Control-Allow-Origin: true
+          method.response.header.Access-Control-Allow-Headers: true
+          method.response.header.Access-Control-Allow-Methods: true
+          method.response.header.Access-Control-Allow-Credentials: true
+    Metadata:
+      SamResourceId: ClearWeekOptionsMethod
+  ClearWeekMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId:
+        Ref: ApiGatewayId
+      ResourceId:
+        Ref: ClearResource
+      HttpMethod: DELETE
+      AuthorizationType: COGNITO_USER_POOLS
+      AuthorizerId:
+        Ref: AuthorizerId
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ClearWeekFunction.Arn}/invocations
+      MethodResponses:
+      - StatusCode: 200
+        ResponseParameters:
+          method.response.header.Access-Control-Allow-Origin: true
+          method.response.header.Access-Control-Allow-Headers: true
+          method.response.header.Access-Control-Allow-Methods: true
+          method.response.header.Access-Control-Allow-Credentials: true
+      - StatusCode: 400
+        ResponseParameters:
+          method.response.header.Access-Control-Allow-Origin: true
+          method.response.header.Access-Control-Allow-Headers: true
+          method.response.header.Access-Control-Allow-Methods: true
+          method.response.header.Access-Control-Allow-Credentials: true
+      - StatusCode: 401
+        ResponseParameters:
+          method.response.header.Access-Control-Allow-Origin: true
+          method.response.header.Access-Control-Allow-Headers: true
+          method.response.header.Access-Control-Allow-Methods: true
+          method.response.header.Access-Control-Allow-Credentials: true
+      - StatusCode: 404
+        ResponseParameters:
+          method.response.header.Access-Control-Allow-Origin: true
+          method.response.header.Access-Control-Allow-Headers: true
+          method.response.header.Access-Control-Allow-Methods: true
+          method.response.header.Access-Control-Allow-Credentials: true
+      - StatusCode: 500
+        ResponseParameters:
+          method.response.header.Access-Control-Allow-Origin: true
+          method.response.header.Access-Control-Allow-Headers: true
+          method.response.header.Access-Control-Allow-Methods: true
+          method.response.header.Access-Control-Allow-Credentials: true
+    Metadata:
+      SamResourceId: ClearWeekMethod
+  ProcessBetSlipOptionsMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId:
+        Ref: ApiGatewayId
+      ResourceId:
+        Ref: BetSlipProcessResource
+      HttpMethod: OPTIONS
+      AuthorizationType: NONE
+      Integration:
+        Type: MOCK
+        RequestTemplates:
+          application/json: ''
+        IntegrationResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: '''https://bets.claytondavis.dev'''
+            method.response.header.Access-Control-Allow-Headers: '''Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'''
+            method.response.header.Access-Control-Allow-Methods: '''GET,POST,PUT,DELETE,OPTIONS'''
+            method.response.header.Access-Control-Allow-Credentials: '''true'''
+          ResponseTemplates:
+            application/json: ''
+      MethodResponses:
+      - StatusCode: 200
+        ResponseParameters:
+          method.response.header.Access-Control-Allow-Origin: true
+          method.response.header.Access-Control-Allow-Headers: true
+          method.response.header.Access-Control-Allow-Methods: true
+          method.response.header.Access-Control-Allow-Credentials: true
+    Metadata:
+      SamResourceId: ProcessBetSlipOptionsMethod
+  ProcessBetSlipMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId:
+        Ref: ApiGatewayId
+      ResourceId:
+        Ref: BetSlipProcessResource
+      HttpMethod: POST
+      AuthorizationType: COGNITO_USER_POOLS
+      AuthorizerId:
+        Ref: AuthorizerId
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ProcessBetSlipFunction.Arn}/invocations
+      MethodResponses:
+      - StatusCode: 200
+        ResponseParameters:
+          method.response.header.Access-Control-Allow-Origin: true
+          method.response.header.Access-Control-Allow-Headers: true
+          method.response.header.Access-Control-Allow-Methods: true
+          method.response.header.Access-Control-Allow-Credentials: true
+      - StatusCode: 400
+        ResponseParameters:
+          method.response.header.Access-Control-Allow-Origin: true
+          method.response.header.Access-Control-Allow-Headers: true
+          method.response.header.Access-Control-Allow-Methods: true
+          method.response.header.Access-Control-Allow-Credentials: true
+      - StatusCode: 401
+        ResponseParameters:
+          method.response.header.Access-Control-Allow-Origin: true
+          method.response.header.Access-Control-Allow-Headers: true
+          method.response.header.Access-Control-Allow-Methods: true
+          method.response.header.Access-Control-Allow-Credentials: true
+      - StatusCode: 422
+        ResponseParameters:
+          method.response.header.Access-Control-Allow-Origin: true
+          method.response.header.Access-Control-Allow-Headers: true
+          method.response.header.Access-Control-Allow-Methods: true
+          method.response.header.Access-Control-Allow-Credentials: true
+      - StatusCode: 500
+        ResponseParameters:
+          method.response.header.Access-Control-Allow-Origin: true
+          method.response.header.Access-Control-Allow-Headers: true
+          method.response.header.Access-Control-Allow-Methods: true
+          method.response.header.Access-Control-Allow-Credentials: true
+    Metadata:
+      SamResourceId: ProcessBetSlipMethod
+  GetBetsPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName:
+        Ref: GetBetsFunction
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn:
+        Fn::Sub: arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiGatewayId}/*/*
+    Metadata:
+      SamResourceId: GetBetsPermission
+  CreateBetPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName:
+        Ref: CreateBetFunction
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn:
+        Fn::Sub: arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiGatewayId}/*/*
+    Metadata:
+      SamResourceId: CreateBetPermission
+  UpdateBetPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName:
+        Ref: UpdateBetFunction
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn:
+        Fn::Sub: arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiGatewayId}/*/*
+    Metadata:
+      SamResourceId: UpdateBetPermission
+  DeleteBetPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName:
+        Ref: DeleteBetFunction
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn:
+        Fn::Sub: arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiGatewayId}/*/*
+    Metadata:
+      SamResourceId: DeleteBetPermission
+  ClearWeekPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName:
+        Ref: ClearWeekFunction
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn:
+        Fn::Sub: arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiGatewayId}/*/*
+    Metadata:
+      SamResourceId: ClearWeekPermission
+  ProcessBetSlipPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName:
+        Ref: ProcessBetSlipFunction
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn:
+        Fn::Sub: arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiGatewayId}/*/*
+    Metadata:
+      SamResourceId: ProcessBetSlipPermission
+  ApiGatewayDeployment:
+    Type: AWS::ApiGateway::Deployment
+    DependsOn:
+    - GetBetsOptionsMethod
+    - GetBetsMethod
+    - CreateBetMethod
+    - BetByIdOptionsMethod
+    - UpdateBetMethod
+    - DeleteBetMethod
+    - ClearWeekOptionsMethod
+    - ClearWeekMethod
+    - ProcessBetSlipOptionsMethod
+    - ProcessBetSlipMethod
+    Properties:
+      RestApiId:
+        Ref: ApiGatewayId
+      StageName:
+        Ref: Environment
+      Description:
+        Fn::Sub: Deployment - OPTIONS methods use MOCK integration for CORS
+    Metadata:
+      SamResourceId: ApiGatewayDeployment
+Outputs:
+  ApiGatewayUrl:
+    Description: API Gateway Base URL
+    Value:
+      Fn::Sub: https://${ApiGatewayId}.execute-api.${AWS::Region}.amazonaws.com/${Environment}
+    Export:
+      Name:
+        Fn::Sub: ${ProjectName}-${Environment}-api-url
+  ApiGatewayCustomUrl:
+    Description: API Gateway Custom Domain URL
+    Value: https://bets-api.claytondavis.dev
+    Export:
+      Name:
+        Fn::Sub: ${ProjectName}-${Environment}-api-custom-url

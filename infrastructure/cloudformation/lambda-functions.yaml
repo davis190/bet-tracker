@@ -178,6 +178,29 @@ Resources:
                 - !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${BetsTableName}'
                 - !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${BetsTableName}/index/*'
 
+  # Process Bet Slip Lambda
+  ProcessBetSlipFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub '${ProjectName}-${Environment}-process-betslip'
+      CodeUri: ../../backend/lambdas/process_betslip/
+      Handler: lambda_function.lambda_handler
+      Runtime: python3.12
+      Timeout: 60
+      Environment:
+        Variables:
+          BETS_TABLE_NAME: !Ref BetsTableName
+          COGNITO_USER_POOL_ID: !Ref UserPoolId
+          BEDROCK_MODEL_ID: 'amazon.nova-pro-v1:0'
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - bedrock:InvokeModel
+              Resource: '*'
+
   # API Gateway Resources and Methods
   BetsResource:
     Type: AWS::ApiGateway::Resource
@@ -199,6 +222,20 @@ Resources:
       RestApiId: !Ref ApiGatewayId
       ParentId: !Ref BetsResource
       PathPart: week
+
+  BetSlipResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref ApiGatewayId
+      ParentId: !Ref ApiGatewayRootResourceId
+      PathPart: betslip
+
+  BetSlipProcessResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref ApiGatewayId
+      ParentId: !Ref BetSlipResource
+      PathPart: process
 
   ClearResource:
     Type: AWS::ApiGateway::Resource
@@ -524,6 +561,80 @@ Resources:
             method.response.header.Access-Control-Allow-Methods: true
             method.response.header.Access-Control-Allow-Credentials: true
 
+  # OPTIONS /betslip/process (CORS preflight)
+  ProcessBetSlipOptionsMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref ApiGatewayId
+      ResourceId: !Ref BetSlipProcessResource
+      HttpMethod: OPTIONS
+      AuthorizationType: NONE
+      Integration:
+        Type: MOCK
+        RequestTemplates:
+          application/json: ''
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Origin: "'https://bets.claytondavis.dev'"
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+              method.response.header.Access-Control-Allow-Methods: "'GET,POST,PUT,DELETE,OPTIONS'"
+              method.response.header.Access-Control-Allow-Credentials: "'true'"
+            ResponseTemplates:
+              application/json: ''
+      MethodResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: true
+            method.response.header.Access-Control-Allow-Headers: true
+            method.response.header.Access-Control-Allow-Methods: true
+            method.response.header.Access-Control-Allow-Credentials: true
+
+  # POST /betslip/process
+  ProcessBetSlipMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref ApiGatewayId
+      ResourceId: !Ref BetSlipProcessResource
+      HttpMethod: POST
+      AuthorizationType: COGNITO_USER_POOLS
+      AuthorizerId: !Ref AuthorizerId
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ProcessBetSlipFunction.Arn}/invocations'
+      MethodResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: true
+            method.response.header.Access-Control-Allow-Headers: true
+            method.response.header.Access-Control-Allow-Methods: true
+            method.response.header.Access-Control-Allow-Credentials: true
+        - StatusCode: 400
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: true
+            method.response.header.Access-Control-Allow-Headers: true
+            method.response.header.Access-Control-Allow-Methods: true
+            method.response.header.Access-Control-Allow-Credentials: true
+        - StatusCode: 401
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: true
+            method.response.header.Access-Control-Allow-Headers: true
+            method.response.header.Access-Control-Allow-Methods: true
+            method.response.header.Access-Control-Allow-Credentials: true
+        - StatusCode: 422
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: true
+            method.response.header.Access-Control-Allow-Headers: true
+            method.response.header.Access-Control-Allow-Methods: true
+            method.response.header.Access-Control-Allow-Credentials: true
+        - StatusCode: 500
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: true
+            method.response.header.Access-Control-Allow-Headers: true
+            method.response.header.Access-Control-Allow-Methods: true
+            method.response.header.Access-Control-Allow-Credentials: true
+
   # Lambda Permissions
   # GetBetsPermission allows API Gateway to invoke GetBetsFunction
   GetBetsPermission:
@@ -566,6 +677,14 @@ Resources:
       Principal: apigateway.amazonaws.com
       SourceArn: !Sub 'arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiGatewayId}/*/*'
 
+  ProcessBetSlipPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref ProcessBetSlipFunction
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub 'arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiGatewayId}/*/*'
+
   # API Gateway Deployment
   # Note: StageDescription is updated to force new deployment when methods change
   ApiGatewayDeployment:
@@ -579,6 +698,8 @@ Resources:
       - DeleteBetMethod
       - ClearWeekOptionsMethod
       - ClearWeekMethod
+      - ProcessBetSlipOptionsMethod
+      - ProcessBetSlipMethod
     Properties:
       RestApiId: !Ref ApiGatewayId
       StageName: !Ref Environment
