@@ -11,7 +11,7 @@ if os.path.exists(shared_path):
     sys.path.insert(0, shared_path)
 
 from shared.responses import success_response, error_response, options_response
-from shared.auth import get_user_id_from_event
+from shared.auth import get_user_id_from_event, get_user_email_from_event
 from shared.dynamodb import create_bet
 from shared.bet_validator import validate_bet, validate_single_bet, validate_parlay
 
@@ -28,10 +28,12 @@ def lambda_handler(event, context):
         return options_response()
     
     try:
-        # Get user ID from event
+        # Get user ID and email from event
         user_id = get_user_id_from_event(event)
         if not user_id:
             return error_response("Unauthorized", 401, "UNAUTHORIZED")
+        
+        user_email = get_user_email_from_event(event)
         
         # Parse request body
         try:
@@ -45,7 +47,7 @@ def lambda_handler(event, context):
             return error_response(error_message, 400, "VALIDATION_ERROR")
         
         # Create bet
-        bet = create_bet(user_id, body)
+        bet = create_bet(user_id, body, user_email)
         
         return success_response(bet, 201)
     

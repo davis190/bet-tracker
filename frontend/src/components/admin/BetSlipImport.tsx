@@ -1,12 +1,23 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { apiClient } from '../../services/api';
 import { ExtractedBet } from '../../types/bet';
+import { useAuth } from '../../contexts/AuthContext';
 
 interface BetSlipImportProps {
   onImported: () => void;
 }
 
+const getUsernameFromEmail = (email: string | undefined): string | undefined => {
+  if (!email || !email.includes('@')) {
+    return undefined;
+  }
+  return email.split('@')[0];
+};
+
 export const BetSlipImport: React.FC<BetSlipImportProps> = ({ onImported }) => {
+  const { user } = useAuth();
+  const defaultAttribution = getUsernameFromEmail(user?.email);
+  
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isExtracting, setIsExtracting] = useState(false);
@@ -15,6 +26,53 @@ export const BetSlipImport: React.FC<BetSlipImportProps> = ({ onImported }) => {
   const [extractedBets, setExtractedBets] = useState<ExtractedBet[]>([]);
   const [selectedIndices, setSelectedIndices] = useState<Set<number>>(new Set());
   const [isImporting, setIsImporting] = useState(false);
+  // Track attribution for bets/parlays (bet index -> attribution string)
+  const [betAttributions, setBetAttributions] = useState<Record<number, string>>({});
+  // Track attribution for parlay legs (bet index -> leg index -> attribution string)
+  const [legAttributions, setLegAttributions] = useState<Record<number, Record<number, string>>>({});
+
+  // Initialize default attributions when bets are extracted
+  useEffect(() => {
+    if (extractedBets.length > 0 && defaultAttribution) {
+      setBetAttributions((prev) => {
+        const newBetAttributions: Record<number, string> = {};
+        extractedBets.forEach((bet, betIndex) => {
+          // Set default attribution for bet/parlay if not already set
+          if (!prev[betIndex]) {
+            newBetAttributions[betIndex] = defaultAttribution;
+          }
+        });
+        return Object.keys(newBetAttributions).length > 0 ? { ...prev, ...newBetAttributions } : prev;
+      });
+      
+      setLegAttributions((prev) => {
+        const newLegAttributions: Record<number, Record<number, string>> = {};
+        extractedBets.forEach((bet, betIndex) => {
+          // Set default attribution for parlay legs if not already set
+          if (bet.type === 'parlay') {
+            bet.legs.forEach((leg, legIndex) => {
+              if (!prev[betIndex]?.[legIndex] && !leg.attributedTo) {
+                if (!newLegAttributions[betIndex]) {
+                  newLegAttributions[betIndex] = {};
+                }
+                newLegAttributions[betIndex][legIndex] = defaultAttribution;
+              }
+            });
+          }
+        });
+        if (Object.keys(newLegAttributions).length === 0) {
+          return prev;
+        }
+        const updated = { ...prev };
+        Object.keys(newLegAttributions).forEach((betIndexStr) => {
+          const betIndex = parseInt(betIndexStr);
+          updated[betIndex] = { ...(updated[betIndex] || {}), ...newLegAttributions[betIndex] };
+        });
+        return updated;
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [extractedBets.length, defaultAttribution]);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = event.target.files?.[0] || null;
@@ -23,6 +81,8 @@ export const BetSlipImport: React.FC<BetSlipImportProps> = ({ onImported }) => {
     setSelectedIndices(new Set());
     setWarnings([]);
     setError(null);
+    setBetAttributions({});
+    setLegAttributions({});
 
     if (selectedFile) {
       const url = URL.createObjectURL(selectedFile);
@@ -61,6 +121,8 @@ export const BetSlipImport: React.FC<BetSlipImportProps> = ({ onImported }) => {
     setWarnings([]);
     setExtractedBets([]);
     setSelectedIndices(new Set());
+    setBetAttributions({});
+    setLegAttributions({});
 
     try {
       const imageBase64 = await readFileAsBase64(file);
@@ -91,6 +153,23 @@ export const BetSlipImport: React.FC<BetSlipImportProps> = ({ onImported }) => {
     });
   };
 
+  const updateBetAttribution = (betIndex: number, value: string) => {
+    setBetAttributions((prev) => ({
+      ...prev,
+      [betIndex]: value,
+    }));
+  };
+
+  const updateLegAttribution = (betIndex: number, legIndex: number, value: string) => {
+    setLegAttributions((prev) => ({
+      ...prev,
+      [betIndex]: {
+        ...(prev[betIndex] || {}),
+        [legIndex]: value,
+      },
+    }));
+  };
+
   const handleImportSelected = async () => {
     if (selectedIndices.size === 0 || extractedBets.length === 0) {
       return;
@@ -100,7 +179,35 @@ export const BetSlipImport: React.FC<BetSlipImportProps> = ({ onImported }) => {
     setError(null);
 
     try {
-      const selectedBets = extractedBets.filter((_, index) => selectedIndices.has(index));
+      const selectedBets = extractedBets
+        .map((bet, index) => {
+          if (!selectedIndices.has(index)) {
+            return null;
+          }
+
+          // Apply attribution to the bet
+          const betAttribution = betAttributions[index];
+          const legAttributionMap = legAttributions[index] || {};
+
+          if (bet.type === 'single') {
+            return {
+              ...bet,
+              attributedTo: betAttribution?.trim() || bet.attributedTo || defaultAttribution,
+            };
+          } else {
+            // For parlays, apply attribution to parlay and legs
+            return {
+              ...bet,
+              attributedTo: betAttribution?.trim() || bet.attributedTo || defaultAttribution,
+              legs: bet.legs.map((leg, legIndex) => ({
+                ...leg,
+                attributedTo: legAttributionMap[legIndex]?.trim() || leg.attributedTo || defaultAttribution,
+              })),
+            };
+          }
+        })
+        .filter((bet): bet is ExtractedBet => bet !== null);
+
       for (const bet of selectedBets) {
         // Use the existing createBet endpoint; types line up with CreateBetRequest
         await apiClient.createBet(bet);
@@ -211,15 +318,14 @@ export const BetSlipImport: React.FC<BetSlipImportProps> = ({ onImported }) => {
                 return (
                   <div
                     key={index}
-                    className={`border rounded p-3 cursor-pointer ${
+                    className={`border rounded p-3 ${
                       isSelected
                         ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/30'
                         : 'border-gray-200 dark:border-gray-700'
                     }`}
-                    onClick={() => toggleSelected(index)}
                   >
-                    <div className="flex justify-between items-center">
-                      <div>
+                    <div className="flex justify-between items-start mb-2">
+                      <div className="flex-1">
                         <div className="flex items-center gap-2">
                           <span className="text-sm font-semibold uppercase tracking-wide">
                             {bet.type === 'single' ? 'Single' : 'Parlay'}
@@ -259,7 +365,7 @@ export const BetSlipImport: React.FC<BetSlipImportProps> = ({ onImported }) => {
                           </div>
                         )}
                       </div>
-                      <div>
+                      <div className="ml-4">
                         <input
                           type="checkbox"
                           checked={isSelected}
@@ -268,6 +374,66 @@ export const BetSlipImport: React.FC<BetSlipImportProps> = ({ onImported }) => {
                           className="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
                         />
                       </div>
+                    </div>
+
+                    {/* Attribution input fields */}
+                    <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700 space-y-2">
+                      {bet.type === 'single' && (
+                        <div>
+                          <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            Attributed To (Optional)
+                          </label>
+                          <input
+                            type="text"
+                            value={betAttributions[index] || defaultAttribution || ''}
+                            onChange={(e) => updateBetAttribution(index, e.target.value)}
+                            onClick={(event) => event.stopPropagation()}
+                            onFocus={(event) => event.stopPropagation()}
+                            className="block w-full text-sm rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                            placeholder={defaultAttribution || "e.g., John Doe"}
+                          />
+                        </div>
+                      )}
+
+                      {isParlay && (
+                        <>
+                          <div>
+                            <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                              Parlay Attributed To (Optional)
+                            </label>
+                            <input
+                              type="text"
+                              value={betAttributions[index] || defaultAttribution || ''}
+                              onChange={(e) => updateBetAttribution(index, e.target.value)}
+                              onClick={(event) => event.stopPropagation()}
+                              onFocus={(event) => event.stopPropagation()}
+                              className="block w-full text-sm rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                              placeholder={defaultAttribution || "e.g., John Doe"}
+                            />
+                          </div>
+                          <div className="mt-2 space-y-2">
+                            <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">
+                              Leg Attributions (Optional)
+                            </label>
+                            {bet.legs.map((leg, legIndex) => (
+                              <div key={legIndex} className="pl-2">
+                                <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">
+                                  Leg {legIndex + 1} - {leg.sport}
+                                </label>
+                                <input
+                                  type="text"
+                                  value={legAttributions[index]?.[legIndex] || defaultAttribution || ''}
+                                  onChange={(e) => updateLegAttribution(index, legIndex, e.target.value)}
+                                  onClick={(event) => event.stopPropagation()}
+                                  onFocus={(event) => event.stopPropagation()}
+                                  className="block w-full text-sm rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                                  placeholder={defaultAttribution || "e.g., Jane Smith"}
+                                />
+                              </div>
+                            ))}
+                          </div>
+                        </>
+                      )}
                     </div>
                   </div>
                 );

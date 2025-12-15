@@ -60,13 +60,14 @@ def decimal_to_float(value: Any) -> Any:
         return value
 
 
-def create_bet(user_id: str, bet_data: Dict[str, Any]) -> Dict[str, Any]:
+def create_bet(user_id: str, bet_data: Dict[str, Any], user_email: Optional[str] = None) -> Dict[str, Any]:
     """
     Create a new bet in DynamoDB.
     
     Args:
         user_id: User ID
         bet_data: Bet data dictionary
+        user_email: User email address (optional, used for default attribution)
     
     Returns:
         Created bet item
@@ -76,6 +77,12 @@ def create_bet(user_id: str, bet_data: Dict[str, Any]) -> Dict[str, Any]:
     
     # Calculate payout
     from .bet_validator import calculate_payout_from_odds, calculate_parlay_payout
+    from .auth import get_username_from_email
+    
+    # Get default attribution from email if not provided
+    default_attribution = None
+    if user_email:
+        default_attribution = get_username_from_email(user_email)
     
     if bet_data["type"] == "single":
         potential_payout = calculate_payout_from_odds(bet_data["amount"], bet_data["odds"])
@@ -108,14 +115,31 @@ def create_bet(user_id: str, bet_data: Dict[str, Any]) -> Dict[str, Any]:
             "selection": bet_data["selection"],
             "odds": float_to_decimal(bet_data["odds"]),
         })
-        # Add attributedTo if present
-        if "attributedTo" in bet_data and bet_data["attributedTo"]:
-            item["attributedTo"] = bet_data["attributedTo"]
+        # Add attributedTo - use provided value or default to username from email
+        attributed_to = bet_data.get("attributedTo")
+        if attributed_to:
+            item["attributedTo"] = attributed_to
+        elif default_attribution:
+            item["attributedTo"] = default_attribution
     else:  # parlay
-        item["legs"] = float_to_decimal(bet_data["legs"])
-        # Add attributedTo if present (for the whole parlay)
-        if "attributedTo" in bet_data and bet_data["attributedTo"]:
-            item["attributedTo"] = bet_data["attributedTo"]
+        # Process legs with default attribution
+        legs = bet_data["legs"]
+        processed_legs = []
+        for leg in legs:
+            processed_leg = {**leg}
+            # Default attribution for each leg if not provided
+            if "attributedTo" not in processed_leg or not processed_leg["attributedTo"]:
+                if default_attribution:
+                    processed_leg["attributedTo"] = default_attribution
+            processed_legs.append(processed_leg)
+        
+        item["legs"] = float_to_decimal(processed_legs)
+        # Add attributedTo for the whole parlay - use provided value or default to username from email
+        attributed_to = bet_data.get("attributedTo")
+        if attributed_to:
+            item["attributedTo"] = attributed_to
+        elif default_attribution:
+            item["attributedTo"] = default_attribution
     
     # Convert entire item to ensure all floats are Decimal before writing to DynamoDB
     item = float_to_decimal(item)

@@ -1,12 +1,23 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { CreateSingleBetRequest } from '../../types/bet';
 import { apiClient } from '../../services/api';
+import { useAuth } from '../../contexts/AuthContext';
 
 interface BetFormProps {
   onSuccess: () => void;
 }
 
+const getUsernameFromEmail = (email: string | undefined): string | undefined => {
+  if (!email || !email.includes('@')) {
+    return undefined;
+  }
+  return email.split('@')[0];
+};
+
 export const BetForm: React.FC<BetFormProps> = ({ onSuccess }) => {
+  const { user } = useAuth();
+  const defaultAttribution = getUsernameFromEmail(user?.email);
+  
   const [formData, setFormData] = useState<CreateSingleBetRequest>({
     type: 'single',
     amount: 0,
@@ -16,8 +27,15 @@ export const BetForm: React.FC<BetFormProps> = ({ onSuccess }) => {
     betType: 'moneyline',
     selection: '',
     odds: 0,
-    attributedTo: undefined,
+    attributedTo: defaultAttribution,
   });
+
+  // Update attribution when user changes
+  useEffect(() => {
+    if (defaultAttribution && !formData.attributedTo) {
+      setFormData((prev) => ({ ...prev, attributedTo: defaultAttribution }));
+    }
+  }, [defaultAttribution]);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -51,7 +69,7 @@ export const BetForm: React.FC<BetFormProps> = ({ onSuccess }) => {
         betType: 'moneyline',
         selection: '',
         odds: 0,
-        attributedTo: undefined,
+        attributedTo: defaultAttribution,
       });
       setOddsInput('0');
     } catch (err: any) {

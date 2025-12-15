@@ -1,15 +1,26 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { CreateParlayRequest, BetLeg } from '../../types/bet';
 import { apiClient } from '../../services/api';
+import { useAuth } from '../../contexts/AuthContext';
 
 interface ParlayFormProps {
   onSuccess: () => void;
 }
 
+const getUsernameFromEmail = (email: string | undefined): string | undefined => {
+  if (!email || !email.includes('@')) {
+    return undefined;
+  }
+  return email.split('@')[0];
+};
+
 export const ParlayForm: React.FC<ParlayFormProps> = ({ onSuccess }) => {
+  const { user } = useAuth();
+  const defaultAttribution = getUsernameFromEmail(user?.email);
+  
   const [amount, setAmount] = useState(0);
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
-  const [attributedTo, setAttributedTo] = useState<string | undefined>(undefined);
+  const [attributedTo, setAttributedTo] = useState<string | undefined>(defaultAttribution);
   const [legs, setLegs] = useState<Omit<BetLeg, 'id'>[]>([
     {
       sport: '',
@@ -17,7 +28,7 @@ export const ParlayForm: React.FC<ParlayFormProps> = ({ onSuccess }) => {
       betType: 'moneyline',
       selection: '',
       odds: 0,
-      attributedTo: undefined,
+      attributedTo: defaultAttribution,
     },
     {
       sport: '',
@@ -25,9 +36,23 @@ export const ParlayForm: React.FC<ParlayFormProps> = ({ onSuccess }) => {
       betType: 'moneyline',
       selection: '',
       odds: 0,
-      attributedTo: undefined,
+      attributedTo: defaultAttribution,
     },
   ]);
+
+  // Update attribution when user changes
+  useEffect(() => {
+    if (defaultAttribution) {
+      setAttributedTo((prev) => prev || defaultAttribution);
+      setLegs((prevLegs) =>
+        prevLegs.map((leg) => ({
+          ...leg,
+          attributedTo: leg.attributedTo || defaultAttribution,
+        }))
+      );
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [defaultAttribution]);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -55,7 +80,7 @@ export const ParlayForm: React.FC<ParlayFormProps> = ({ onSuccess }) => {
       betType: 'moneyline',
       selection: '',
       odds: 0,
-      attributedTo: undefined,
+      attributedTo: defaultAttribution,
     }]);
     setOddsInputs([...oddsInputs, '0']);
   };
@@ -99,10 +124,10 @@ export const ParlayForm: React.FC<ParlayFormProps> = ({ onSuccess }) => {
       // Reset form
       setAmount(0);
       setDate(new Date().toISOString().split('T')[0]);
-      setAttributedTo(undefined);
+      setAttributedTo(defaultAttribution);
       setLegs([
-        { sport: '', teams: '', betType: 'moneyline', selection: '', odds: 0, attributedTo: undefined },
-        { sport: '', teams: '', betType: 'moneyline', selection: '', odds: 0, attributedTo: undefined },
+        { sport: '', teams: '', betType: 'moneyline', selection: '', odds: 0, attributedTo: defaultAttribution },
+        { sport: '', teams: '', betType: 'moneyline', selection: '', odds: 0, attributedTo: defaultAttribution },
       ]);
       setOddsInputs(['0', '0']);
     } catch (err: any) {
