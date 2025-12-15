@@ -21,6 +21,35 @@ def encode_image_to_base64(image_bytes: bytes) -> str:
     return base64.b64encode(image_bytes).decode("utf-8")
 
 
+def detect_image_format(image_bytes: bytes) -> str:
+    """
+    Detect image format from image bytes by checking magic bytes.
+    
+    Returns: 'png', 'jpeg', 'gif', 'webp', or 'png' as default
+    """
+    if len(image_bytes) < 12:
+        return "png"  # Default fallback
+    
+    # Check PNG signature: 89 50 4E 47 0D 0A 1A 0A
+    if image_bytes[:8] == b"\x89\x50\x4E\x47\x0D\x0A\x1A\x0A":
+        return "png"
+    
+    # Check JPEG signature: FF D8 FF
+    if image_bytes[:3] == b"\xFF\xD8\xFF":
+        return "jpeg"
+    
+    # Check GIF signature: GIF87a or GIF89a
+    if image_bytes[:6] in (b"GIF87a", b"GIF89a"):
+        return "gif"
+    
+    # Check WebP signature: RIFF...WEBP
+    if image_bytes[:4] == b"RIFF" and image_bytes[8:12] == b"WEBP":
+        return "webp"
+    
+    # Default to png if unknown
+    return "png"
+
+
 def build_betslip_prompt() -> str:
     """
     Build the system/user text prompt instructing the model to extract bets.
@@ -86,6 +115,7 @@ def analyze_betslip_image(image_bytes: bytes) -> str:
 
     prompt = build_betslip_prompt()
     image_b64 = encode_image_to_base64(image_bytes)
+    image_format = detect_image_format(image_bytes)
 
     # Use the converse API for multimodal bet slip analysis
     response = client.converse(
@@ -99,7 +129,7 @@ def analyze_betslip_image(image_bytes: bytes) -> str:
                     },
                     {
                         'image': {
-                            'format': 'png',
+                            'format': image_format,
                             'source': {
                                 'bytes': image_b64,
                             },
