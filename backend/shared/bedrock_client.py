@@ -17,15 +17,33 @@ def get_bedrock_client():
 
 
 def encode_image_to_base64(image_bytes: bytes) -> str:
-    """Encode raw image bytes to a base64 string."""
-    return base64.b64encode(image_bytes).decode("utf-8")
+    """
+    Encode raw image bytes to a base64 string.
+    
+    Returns a clean base64 string with no whitespace or newlines.
+    """
+    if not image_bytes:
+        raise ValueError("Cannot encode empty image bytes")
+    
+    # Validate that these look like image bytes (at least have a valid header)
+    if len(image_bytes) < 4:
+        raise ValueError("Image bytes are too short to be a valid image")
+    
+    encoded = base64.b64encode(image_bytes).decode("utf-8")
+    # Remove any whitespace that might have been introduced
+    return encoded.strip()
 
 
 def detect_image_format(image_bytes: bytes) -> str:
     """
     Detect image format from image bytes by checking magic bytes.
     
-    Returns: 'png', 'jpeg', 'gif', 'webp', or 'png' as default
+    Returns format string that matches Bedrock's expected format names:
+    - 'png' for PNG images
+    - 'jpeg' for JPEG images (Bedrock expects 'jpeg', not 'jpg')
+    - 'gif' for GIF images
+    - 'webp' for WebP images
+    - 'png' as default fallback
     """
     if len(image_bytes) < 12:
         return "png"  # Default fallback
@@ -35,6 +53,7 @@ def detect_image_format(image_bytes: bytes) -> str:
         return "png"
     
     # Check JPEG signature: FF D8 FF
+    # Note: Bedrock expects 'jpeg' format name
     if image_bytes[:3] == b"\xFF\xD8\xFF":
         return "jpeg"
     
@@ -43,7 +62,7 @@ def detect_image_format(image_bytes: bytes) -> str:
         return "gif"
     
     # Check WebP signature: RIFF...WEBP
-    if image_bytes[:4] == b"RIFF" and image_bytes[8:12] == b"WEBP":
+    if len(image_bytes) >= 12 and image_bytes[:4] == b"RIFF" and image_bytes[8:12] == b"WEBP":
         return "webp"
     
     # Default to png if unknown
@@ -111,13 +130,31 @@ def analyze_betslip_image(image_bytes: bytes) -> str:
     if not model_id:
         raise ValueError("BEDROCK_MODEL_ID environment variable is not set")
 
+    # Validate that we have actual image bytes
+    if not image_bytes or len(image_bytes) < 12:
+        raise ValueError("Invalid image data: image bytes are empty or too small")
+    
+    # Verify the bytes look like binary image data, not text
+    # Check if the first few bytes contain valid image magic numbers
+    # If it's all ASCII text, that's a problem
+    first_bytes = image_bytes[:min(100, len(image_bytes))]
+    if all(32 <= b <= 126 or b in (9, 10, 13) for b in first_bytes[:50]):
+        # This looks like text, not binary image data
+        raise ValueError("Image bytes appear to be text data rather than binary image data. Ensure image is properly decoded from base64.")
+    
+    # Detect format and validate it's a supported image format
+    image_format = detect_image_format(image_bytes)
+    if image_format not in ['png', 'jpeg', 'gif', 'webp']:
+        raise ValueError(f"Unsupported image format detected. Expected PNG, JPEG, GIF, or WebP, but format detection failed.")
+
     client = get_bedrock_client()
 
     prompt = build_betslip_prompt()
     image_b64 = encode_image_to_base64(image_bytes)
-    image_format = detect_image_format(image_bytes)
 
     # Use the converse API for multimodal bet slip analysis
+    # The 'bytes' field expects a base64-encoded string (not raw bytes)
+    # boto3 will serialize this correctly for the API call
     response = client.converse(
         modelId=model_id,
         messages=[
