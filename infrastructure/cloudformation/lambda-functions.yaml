@@ -199,6 +199,7 @@ Resources:
             - Effect: Allow
               Action:
                 - bedrock:InvokeModel
+                - bedrock:Converse
               Resource: '*'
 
   # API Gateway Resources and Methods
@@ -255,7 +256,7 @@ Resources:
       Integration:
         Type: MOCK
         RequestTemplates:
-          application/json: ''
+          application/json: '{"statusCode": 200}'
         IntegrationResponses:
           - StatusCode: 200
             ResponseParameters:
@@ -379,7 +380,7 @@ Resources:
       Integration:
         Type: MOCK
         RequestTemplates:
-          application/json: ''
+          application/json: '{"statusCode": 200}'
         IntegrationResponses:
           - StatusCode: 200
             ResponseParameters:
@@ -498,7 +499,7 @@ Resources:
       Integration:
         Type: MOCK
         RequestTemplates:
-          application/json: ''
+          application/json: '{"statusCode": 200}'
         IntegrationResponses:
           - StatusCode: 200
             ResponseParameters:
@@ -572,7 +573,7 @@ Resources:
       Integration:
         Type: MOCK
         RequestTemplates:
-          application/json: ''
+          application/json: '{"statusCode": 200}'
         IntegrationResponses:
           - StatusCode: 200
             ResponseParameters:
@@ -703,7 +704,7 @@ Resources:
     Properties:
       RestApiId: !Ref ApiGatewayId
       StageName: !Ref Environment
-      Description: !Sub 'Deployment - OPTIONS methods use MOCK integration for CORS - v3'
+      Description: !Sub 'Deployment - OPTIONS methods use MOCK integration for CORS - v4'
 
 Outputs:
   ApiGatewayUrl:

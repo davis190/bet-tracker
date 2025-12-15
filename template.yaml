@@ -153,6 +153,7 @@ Resources:
             - Effect: Allow
               Action:
                 - bedrock:InvokeModel
+                - bedrock:Converse
               Resource: '*'
 
 Outputs:

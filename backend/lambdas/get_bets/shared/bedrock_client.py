@@ -1,9 +1,7 @@
 """Amazon Bedrock (Nova) client utilities for multimodal bet slip analysis."""
 
 import base64
-import json
 import os
-from typing import Any, Dict
 
 import boto3
 
@@ -89,49 +87,48 @@ def analyze_betslip_image(image_bytes: bytes) -> str:
     prompt = build_betslip_prompt()
     image_b64 = encode_image_to_base64(image_bytes)
 
-    # Payload structure for Amazon Nova multimodal models.
-    body: Dict[str, Any] = {
-        "input": [
+    # Use the converse API for multimodal bet slip analysis
+    response = client.converse(
+        modelId=model_id,
+        messages=[
             {
-                "role": "user",
-                "content": [
+                'role': 'user',
+                'content': [
                     {
-                        "type": "input_text",
-                        "text": prompt,
+                        'text': prompt,
                     },
                     {
-                        "type": "input_image",
-                        "image": {
-                            "format": "png",
-                            "source": {
-                                "bytes": image_b64,
+                        'image': {
+                            'format': 'png',
+                            'source': {
+                                'bytes': image_b64,
                             },
                         },
                     },
                 ],
-            }
+            },
         ],
-        # Ask explicitly for a JSON object so the model avoids prose.
-        "response_format": {
-            "type": "json_object",
+        inferenceConfig={
+            'maxTokens': 4096,
+            'temperature': 0.0,
+            'topP': 0.9,
         },
-    }
-
-    response = client.invoke_model(
-        modelId=model_id,
-        body=json.dumps(body),
-        contentType="application/json",
-        accept="application/json",
     )
 
-    # Bedrock responses provide a streaming body; read and decode to text
-    raw_body = response.get("body")
-    if hasattr(raw_body, "read"):
-        raw_bytes = raw_body.read()
-    else:
-        raw_bytes = raw_body or b""
-
-    text = raw_bytes.decode("utf-8")
-    return text
+    # Extract text from converse API response
+    # Response structure: output.message.content[0].text
+    output = response.get('output', {})
+    message = output.get('message', {})
+    content = message.get('content', [])
+    
+    if not content:
+        raise ValueError("No content in Bedrock response")
+    
+    # Get the first text content block
+    text_content = content[0].get('text', '')
+    if not text_content:
+        raise ValueError("No text content in Bedrock response")
+    
+    return text_content
 
 

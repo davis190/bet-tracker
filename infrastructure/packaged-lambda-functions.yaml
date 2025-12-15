@@ -286,7 +286,7 @@ Resources:
       Integration:
         Type: MOCK
         RequestTemplates:
-          application/json: ''
+          application/json: '{"statusCode": 200}'
         IntegrationResponses:
         - StatusCode: 200
           ResponseParameters:
@@ -419,7 +419,7 @@ Resources:
       Integration:
         Type: MOCK
         RequestTemplates:
-          application/json: ''
+          application/json: '{"statusCode": 200}'
         IntegrationResponses:
         - StatusCode: 200
           ResponseParameters:
@@ -548,7 +548,7 @@ Resources:
       Integration:
         Type: MOCK
         RequestTemplates:
-          application/json: ''
+          application/json: '{"statusCode": 200}'
         IntegrationResponses:
         - StatusCode: 200
           ResponseParameters:
@@ -628,7 +628,7 @@ Resources:
       Integration:
         Type: MOCK
         RequestTemplates:
-          application/json: ''
+          application/json: '{"statusCode": 200}'
         IntegrationResponses:
         - StatusCode: 200
           ResponseParameters:
@@ -781,7 +781,7 @@ Resources:
       StageName:
         Ref: Environment
       Description:
-        Fn::Sub: Deployment - OPTIONS methods use MOCK integration for CORS
+        Fn::Sub: Deployment - OPTIONS methods use MOCK integration for CORS - v4
     Metadata:
       SamResourceId: ApiGatewayDeployment
 Outputs:
