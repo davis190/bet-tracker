@@ -52,7 +52,7 @@ export const BetCard: React.FC<BetCardProps> = ({ bet }) => {
         </div>
       </div>
 
-      <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+      <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700 flex justify-between items-center">
         <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
           bet.status === 'won' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
           bet.status === 'lost' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
@@ -60,6 +60,11 @@ export const BetCard: React.FC<BetCardProps> = ({ bet }) => {
         }`}>
           {bet.status.toUpperCase()}
         </span>
+        {bet.attributedTo && (
+          <span className="text-xs text-gray-500 dark:text-gray-400 italic">
+            Suggested by: {bet.attributedTo}
+          </span>
+        )}
       </div>
     </div>
   );

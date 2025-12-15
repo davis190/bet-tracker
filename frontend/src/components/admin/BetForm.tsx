@@ -16,6 +16,7 @@ export const BetForm: React.FC<BetFormProps> = ({ onSuccess }) => {
     betType: 'moneyline',
     selection: '',
     odds: 0,
+    attributedTo: undefined,
   });
 
   const [loading, setLoading] = useState(false);
@@ -50,6 +51,7 @@ export const BetForm: React.FC<BetFormProps> = ({ onSuccess }) => {
         betType: 'moneyline',
         selection: '',
         odds: 0,
+        attributedTo: undefined,
       });
       setOddsInput('0');
     } catch (err: any) {
@@ -202,6 +204,19 @@ export const BetForm: React.FC<BetFormProps> = ({ onSuccess }) => {
           <div className="mt-1 text-lg font-semibold text-green-600 dark:text-green-400">
             ${potentialPayout.toFixed(2)}
           </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            Attributed To (Optional)
+          </label>
+          <input
+            type="text"
+            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+            value={formData.attributedTo || ''}
+            onChange={(e) => setFormData({ ...formData, attributedTo: e.target.value || undefined })}
+            placeholder="e.g., John Doe"
+          />
         </div>
       </div>
 

@@ -11,6 +11,7 @@ export const Dashboard: React.FC = () => {
   const [bets, setBets] = useState<Bet[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [attributionFilter, setAttributionFilter] = useState<string>('');
   const { isAuthenticated } = useAuth();
 
   useEffect(() => {
@@ -27,6 +28,49 @@ export const Dashboard: React.FC = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Extract all unique attribution values from bets
+  const getAllAttributions = (): string[] => {
+    const attributions = new Set<string>();
+    
+    bets.forEach((bet) => {
+      if (isSingleBet(bet) && bet.attributedTo) {
+        attributions.add(bet.attributedTo);
+      } else if (isParlay(bet)) {
+        if (bet.attributedTo) {
+          attributions.add(bet.attributedTo);
+        }
+        bet.legs.forEach((leg) => {
+          if (leg.attributedTo) {
+            attributions.add(leg.attributedTo);
+          }
+        });
+      }
+    });
+    
+    return Array.from(attributions).sort();
+  };
+
+  // Filter bets based on attribution
+  const filterBetsByAttribution = (betsToFilter: Bet[]): Bet[] => {
+    if (!attributionFilter) {
+      return betsToFilter;
+    }
+
+    return betsToFilter.filter((bet) => {
+      if (isSingleBet(bet)) {
+        // Single bet: match if attributedTo matches
+        return bet.attributedTo === attributionFilter;
+      } else if (isParlay(bet)) {
+        // Parlay: match if parlay's attributedTo matches OR any leg's attributedTo matches
+        if (bet.attributedTo === attributionFilter) {
+          return true;
+        }
+        return bet.legs.some((leg) => leg.attributedTo === attributionFilter);
+      }
+      return false;
+    });
   };
 
   if (loading) {
@@ -57,9 +101,14 @@ export const Dashboard: React.FC = () => {
     );
   }
 
+  // Filter bets by attribution
+  const filteredBets = filterBetsByAttribution(bets);
+  
   // Show all bets regardless of status
-  const singleBets = bets.filter(isSingleBet);
-  const parlays = bets.filter(isParlay);
+  const singleBets = filteredBets.filter(isSingleBet);
+  const parlays = filteredBets.filter(isParlay);
+  
+  const allAttributions = getAllAttributions();
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -93,9 +142,40 @@ export const Dashboard: React.FC = () => {
           </div>
         ) : (
           <div className="space-y-8">
+            {allAttributions.length > 0 && (
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 mb-6">
+                <div className="flex flex-wrap gap-4 items-center">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Filter by Attribution:
+                  </label>
+                  <select
+                    className="rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                    value={attributionFilter}
+                    onChange={(e) => setAttributionFilter(e.target.value)}
+                  >
+                    <option value="">All Bets</option>
+                    {allAttributions.map((attr) => (
+                      <option key={attr} value={attr}>
+                        {attr}
+                      </option>
+                    ))}
+                  </select>
+                  {attributionFilter && (
+                    <button
+                      onClick={() => setAttributionFilter('')}
+                      className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 underline"
+                    >
+                      Clear Filter
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
             {singleBets.length > 0 && (
               <div>
-                <h3 className="text-xl md:text-2xl font-semibold mb-4">Single Bets</h3>
+                <h3 className="text-xl md:text-2xl font-semibold mb-4">
+                  Single Bets {attributionFilter && `(${singleBets.length})`}
+                </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {singleBets.map((bet) => (
                     <BetCard key={bet.betId} bet={bet} />
@@ -106,12 +186,20 @@ export const Dashboard: React.FC = () => {
 
             {parlays.length > 0 && (
               <div>
-                <h3 className="text-xl md:text-2xl font-semibold mb-4">Parlays</h3>
+                <h3 className="text-xl md:text-2xl font-semibold mb-4">
+                  Parlays {attributionFilter && `(${parlays.length})`}
+                </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {parlays.map((bet) => (
                     <ParlayCard key={bet.betId} bet={bet} onUpdate={loadBets} />
                   ))}
                 </div>
+              </div>
+            )}
+
+            {attributionFilter && singleBets.length === 0 && parlays.length === 0 && (
+              <div className="text-center py-12 text-gray-500 text-lg md:text-xl">
+                No bets found for "{attributionFilter}"
               </div>
             )}
           </div>

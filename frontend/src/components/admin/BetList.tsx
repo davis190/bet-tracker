@@ -69,6 +69,28 @@ export const BetList: React.FC<BetListProps> = ({ refreshTrigger, onRefresh }) =
     }
   };
 
+  // Check if a bet has pending status or pending legs
+  const hasPendingStatus = (bet: Bet): boolean => {
+    if (bet.status === 'pending') {
+      return true;
+    }
+    if (isParlay(bet)) {
+      // Check if any leg is pending
+      return bet.legs.some((leg) => !leg.status || leg.status === 'pending');
+    }
+    return false;
+  };
+
+  // Sort bets: pending bets (or bets with pending legs) first
+  const sortedBets = [...bets].sort((a, b) => {
+    const aHasPending = hasPendingStatus(a);
+    const bHasPending = hasPendingStatus(b);
+    
+    if (aHasPending && !bHasPending) return -1;
+    if (!aHasPending && bHasPending) return 1;
+    return 0;
+  });
+
   if (loading) {
     return <div className="text-center py-8">Loading bets...</div>;
   }
@@ -108,11 +130,11 @@ export const BetList: React.FC<BetListProps> = ({ refreshTrigger, onRefresh }) =
         </div>
       </div>
 
-      {bets.length === 0 ? (
+      {sortedBets.length === 0 ? (
         <div className="text-center py-8 text-gray-500">No bets found</div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {bets.map((bet) => (
+          {sortedBets.map((bet) => (
             <div
               key={bet.betId}
               className="border rounded-lg p-4 space-y-2 dark:border-gray-600"
@@ -136,6 +158,11 @@ export const BetList: React.FC<BetListProps> = ({ refreshTrigger, onRefresh }) =
                   <div className="text-sm font-semibold text-green-600 dark:text-green-400">
                     Payout: ${bet.potentialPayout.toFixed(2)}
                   </div>
+                  {bet.attributedTo && (
+                    <div className="text-xs text-gray-500 dark:text-gray-400 italic mt-1">
+                      Suggested by: {bet.attributedTo}
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -146,6 +173,11 @@ export const BetList: React.FC<BetListProps> = ({ refreshTrigger, onRefresh }) =
                   <div className="text-sm font-semibold text-green-600 dark:text-green-400">
                     Payout: ${bet.potentialPayout.toFixed(2)}
                   </div>
+                  {bet.attributedTo && (
+                    <div className="text-xs text-gray-500 dark:text-gray-400 italic mt-1">
+                      Suggested by: {bet.attributedTo}
+                    </div>
+                  )}
                   <details className="mt-2" open>
                     <summary className="text-sm cursor-pointer text-indigo-600 dark:text-indigo-400">
                       View Legs
@@ -161,6 +193,11 @@ export const BetList: React.FC<BetListProps> = ({ refreshTrigger, onRefresh }) =
                                 <div className="text-gray-600 dark:text-gray-400">
                                   {leg.betType}: {leg.selection} ({leg.odds > 0 ? '+' : ''}{leg.odds})
                                 </div>
+                                {leg.attributedTo && (
+                                  <div className="text-xs text-gray-500 dark:text-gray-400 italic mt-1">
+                                    {leg.attributedTo}
+                                  </div>
+                                )}
                               </div>
                               <span className={`px-2 py-1 rounded text-xs font-semibold ${getStatusBadgeClass(legStatus)}`}>
                                 {legStatus.toUpperCase()}

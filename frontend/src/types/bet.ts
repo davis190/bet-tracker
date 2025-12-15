@@ -10,6 +10,7 @@ export interface BetLeg {
   selection: string;
   odds: number;
   status?: BetStatus; // Optional, defaults to 'pending' if not set
+  attributedTo?: string; // Optional, name of person who suggested this bet
 }
 
 export interface SingleBet {
@@ -27,6 +28,7 @@ export interface SingleBet {
   odds: number;
   createdAt: string;
   updatedAt: string;
+  attributedTo?: string; // Optional, name of person who suggested this bet
 }
 
 export interface Parlay {
@@ -40,6 +42,7 @@ export interface Parlay {
   legs: BetLeg[];
   createdAt: string;
   updatedAt: string;
+  attributedTo?: string; // Optional, name of person who suggested this parlay
 }
 
 export type Bet = SingleBet | Parlay;
@@ -63,6 +66,7 @@ export interface CreateSingleBetRequest {
   betType: BetLegBetType;
   selection: string;
   odds: number;
+  attributedTo?: string; // Optional, name of person who suggested this bet
 }
 
 export interface CreateParlayRequest {
@@ -70,6 +74,7 @@ export interface CreateParlayRequest {
   amount: number;
   date: string;
   legs: Omit<BetLeg, "id">[];
+  attributedTo?: string; // Optional, name of person who suggested this parlay
 }
 
 export type CreateBetRequest = CreateSingleBetRequest | CreateParlayRequest;

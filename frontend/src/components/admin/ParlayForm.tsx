@@ -9,6 +9,7 @@ interface ParlayFormProps {
 export const ParlayForm: React.FC<ParlayFormProps> = ({ onSuccess }) => {
   const [amount, setAmount] = useState(0);
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const [attributedTo, setAttributedTo] = useState<string | undefined>(undefined);
   const [legs, setLegs] = useState<Omit<BetLeg, 'id'>[]>([
     {
       sport: '',
@@ -16,6 +17,7 @@ export const ParlayForm: React.FC<ParlayFormProps> = ({ onSuccess }) => {
       betType: 'moneyline',
       selection: '',
       odds: 0,
+      attributedTo: undefined,
     },
     {
       sport: '',
@@ -23,6 +25,7 @@ export const ParlayForm: React.FC<ParlayFormProps> = ({ onSuccess }) => {
       betType: 'moneyline',
       selection: '',
       odds: 0,
+      attributedTo: undefined,
     },
   ]);
 
@@ -52,6 +55,7 @@ export const ParlayForm: React.FC<ParlayFormProps> = ({ onSuccess }) => {
       betType: 'moneyline',
       selection: '',
       odds: 0,
+      attributedTo: undefined,
     }]);
     setOddsInputs([...oddsInputs, '0']);
   };
@@ -88,15 +92,17 @@ export const ParlayForm: React.FC<ParlayFormProps> = ({ onSuccess }) => {
         amount,
         date,
         legs,
+        attributedTo: attributedTo || undefined,
       };
       await apiClient.createBet(parlay);
       onSuccess();
       // Reset form
       setAmount(0);
       setDate(new Date().toISOString().split('T')[0]);
+      setAttributedTo(undefined);
       setLegs([
-        { sport: '', teams: '', betType: 'moneyline', selection: '', odds: 0 },
-        { sport: '', teams: '', betType: 'moneyline', selection: '', odds: 0 },
+        { sport: '', teams: '', betType: 'moneyline', selection: '', odds: 0, attributedTo: undefined },
+        { sport: '', teams: '', betType: 'moneyline', selection: '', odds: 0, attributedTo: undefined },
       ]);
       setOddsInputs(['0', '0']);
     } catch (err: any) {
@@ -152,6 +158,22 @@ export const ParlayForm: React.FC<ParlayFormProps> = ({ onSuccess }) => {
           <div className="mt-1 text-lg font-semibold text-green-600 dark:text-green-400">
             ${potentialPayout.toFixed(2)}
           </div>
+        </div>
+
+        <div className="md:col-span-2">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            Attributed To (Optional)
+          </label>
+          <input
+            type="text"
+            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+            value={attributedTo || ''}
+            onChange={(e) => setAttributedTo(e.target.value || undefined)}
+            placeholder="e.g., John Doe"
+          />
+          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+            Attribution for the entire parlay. You can also attribute individual legs below.
+          </p>
         </div>
       </div>
 
@@ -293,6 +315,19 @@ export const ParlayForm: React.FC<ParlayFormProps> = ({ onSuccess }) => {
                     }
                   }}
                   placeholder="e.g., -150"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Attributed To (Optional)
+                </label>
+                <input
+                  type="text"
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                  value={leg.attributedTo || ''}
+                  onChange={(e) => updateLeg(index, 'attributedTo', e.target.value || undefined)}
+                  placeholder="e.g., John Doe"
                 />
               </div>
             </div>
