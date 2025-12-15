@@ -36,7 +36,7 @@ export const BetSlipImport: React.FC<BetSlipImportProps> = ({ onImported }) => {
     if (extractedBets.length > 0 && defaultAttribution) {
       setBetAttributions((prev) => {
         const newBetAttributions: Record<number, string> = {};
-        extractedBets.forEach((bet, betIndex) => {
+        extractedBets.forEach((_bet, betIndex) => {
           // Set default attribution for bet/parlay if not already set
           if (!prev[betIndex]) {
             newBetAttributions[betIndex] = defaultAttribution;
@@ -179,7 +179,7 @@ export const BetSlipImport: React.FC<BetSlipImportProps> = ({ onImported }) => {
     setError(null);
 
     try {
-      const selectedBets = extractedBets
+      const selectedBets: ExtractedBet[] = extractedBets
         .map((bet, index) => {
           if (!selectedIndices.has(index)) {
             return null;
@@ -190,20 +190,25 @@ export const BetSlipImport: React.FC<BetSlipImportProps> = ({ onImported }) => {
           const legAttributionMap = legAttributions[index] || {};
 
           if (bet.type === 'single') {
+            const attributedTo = betAttribution?.trim() || bet.attributedTo || defaultAttribution;
             return {
               ...bet,
-              attributedTo: betAttribution?.trim() || bet.attributedTo || defaultAttribution,
-            };
+              ...(attributedTo ? { attributedTo } : {}),
+            } as ExtractedBet;
           } else {
             // For parlays, apply attribution to parlay and legs
+            const attributedTo = betAttribution?.trim() || bet.attributedTo || defaultAttribution;
             return {
               ...bet,
-              attributedTo: betAttribution?.trim() || bet.attributedTo || defaultAttribution,
-              legs: bet.legs.map((leg, legIndex) => ({
-                ...leg,
-                attributedTo: legAttributionMap[legIndex]?.trim() || leg.attributedTo || defaultAttribution,
-              })),
-            };
+              ...(attributedTo ? { attributedTo } : {}),
+              legs: bet.legs.map((leg, legIndex) => {
+                const legAttributedTo = legAttributionMap[legIndex]?.trim() || leg.attributedTo || defaultAttribution;
+                return {
+                  ...leg,
+                  ...(legAttributedTo ? { attributedTo: legAttributedTo } : {}),
+                };
+              }),
+            } as ExtractedBet;
           }
         })
         .filter((bet): bet is ExtractedBet => bet !== null);
