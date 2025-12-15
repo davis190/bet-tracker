@@ -571,8 +571,9 @@ Resources:
       AuthorizationType: NONE
       Integration:
         Type: MOCK
+        PassthroughBehavior: WHEN_NO_MATCH
         RequestTemplates:
-          application/json: ''
+          application/json: '{"statusCode": 200}'
         IntegrationResponses:
           - StatusCode: 200
             ResponseParameters:
@@ -703,7 +704,7 @@ Resources:
     Properties:
       RestApiId: !Ref ApiGatewayId
       StageName: !Ref Environment
-      Description: !Sub 'Deployment - OPTIONS methods use MOCK integration for CORS'
+      Description: !Sub 'Deployment - OPTIONS methods use MOCK integration for CORS - v2'
 
 Outputs:
   ApiGatewayUrl:
