@@ -174,49 +174,17 @@ def analyze_betslip_image(image_bytes: bytes) -> str:
     client = get_bedrock_client()
 
     prompt = build_betslip_prompt()
-    image_b64 = encode_image_to_base64(image_bytes)
     
-    # Log base64 encoding details
-    logger.info(f"Base64 string length: {len(image_b64)}")
-    logger.info(f"Base64 string first 50 chars: {image_b64[:50]}")
-    logger.info(f"Base64 string is valid base64: {_is_valid_base64(image_b64)}")
-
-    # Use the converse API for multimodal bet slip analysis
-    # According to AWS Bedrock API docs, the 'bytes' field should be a base64-encoded string
-    # boto3 will serialize this to JSON properly
-    logger.info(f"Calling Bedrock converse API with model {model_id}, format {image_format}")
-    logger.info(f"Image source structure: format={image_format}, bytes_type={type(image_b64)}, bytes_len={len(image_b64)}")
-    
-    # Ensure image_b64 is a string (not bytes)
-    if isinstance(image_b64, bytes):
-        image_b64 = image_b64.decode('utf-8')
-        logger.info("Converted image_b64 from bytes to string")
+    # According to AWS Bedrock converse API documentation and Stack Overflow:
+    # The 'bytes' field should contain RAW image bytes, not base64-encoded string
+    # boto3 will handle the base64 encoding/serialization automatically when sending to the API
+    logger.info(f"Preparing to call Bedrock converse API with model {model_id}, format {image_format}")
+    logger.info(f"Image bytes type: {type(image_bytes)}, length: {len(image_bytes)}")
+    logger.info(f"Image bytes first 20 hex: {image_bytes[:20].hex()}")
     
     try:
-        # According to AWS Bedrock API documentation for converse:
-        # The 'bytes' field in image source should be a base64-encoded string
-        # Ensure the base64 string is clean (no whitespace) and valid
-        image_b64_clean = ''.join(image_b64.split())
-        
-        # Validate the cleaned base64 string decodes back to the same image bytes
-        try:
-            decoded_clean = base64.b64decode(image_b64_clean, validate=True)
-            if len(decoded_clean) != len(image_bytes) or decoded_clean[:20] != image_bytes[:20]:
-                logger.error("Cleaned base64 does not decode to original image bytes!")
-                raise ValueError("Base64 validation failed: decoded data doesn't match original")
-            logger.info(f"Validated cleaned base64 string decodes correctly, length: {len(image_b64_clean)}")
-        except Exception as val_error:
-            logger.error(f"Base64 validation error: {val_error}")
-            raise ValueError(f"Invalid base64 encoding: {val_error}")
-        
-        # Ensure it's a proper Python string (UTF-8)
-        if not isinstance(image_b64_clean, str):
-            image_b64_clean = str(image_b64_clean)
-        logger.info(f"Final base64 string type: {type(image_b64_clean)}, length: {len(image_b64_clean)}")
-        logger.info(f"First 10 chars of base64: {image_b64_clean[:10]}, Last 10 chars: {image_b64_clean[-10:]}")
-        
         # Call Bedrock converse API
-        # The 'bytes' field must be a base64-encoded string per AWS documentation
+        # The 'bytes' field should be raw image bytes - boto3 handles encoding
         logger.info(f"Making Bedrock converse API call with model={model_id}, format={image_format}")
         
         response = client.converse(
@@ -232,7 +200,7 @@ def analyze_betslip_image(image_bytes: bytes) -> str:
                             'image': {
                                 'format': image_format,
                                 'source': {
-                                    'bytes': image_b64_clean,
+                                    'bytes': image_bytes,  # Raw bytes, not base64 string!
                                 },
                             },
                         },
