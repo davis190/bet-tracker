@@ -193,11 +193,35 @@ def analyze_betslip_image(image_bytes: bytes) -> str:
         logger.info("Converted image_b64 from bytes to string")
     
     try:
-        # Construct the request payload
-        # The 'bytes' field should be a base64-encoded string per AWS documentation
-        request_payload = {
-            'modelId': model_id,
-            'messages': [
+        # According to AWS Bedrock API documentation for converse:
+        # The 'bytes' field in image source should be a base64-encoded string
+        # Ensure the base64 string is clean (no whitespace) and valid
+        image_b64_clean = ''.join(image_b64.split())
+        
+        # Validate the cleaned base64 string decodes back to the same image bytes
+        try:
+            decoded_clean = base64.b64decode(image_b64_clean, validate=True)
+            if len(decoded_clean) != len(image_bytes) or decoded_clean[:20] != image_bytes[:20]:
+                logger.error("Cleaned base64 does not decode to original image bytes!")
+                raise ValueError("Base64 validation failed: decoded data doesn't match original")
+            logger.info(f"Validated cleaned base64 string decodes correctly, length: {len(image_b64_clean)}")
+        except Exception as val_error:
+            logger.error(f"Base64 validation error: {val_error}")
+            raise ValueError(f"Invalid base64 encoding: {val_error}")
+        
+        # Ensure it's a proper Python string (UTF-8)
+        if not isinstance(image_b64_clean, str):
+            image_b64_clean = str(image_b64_clean)
+        logger.info(f"Final base64 string type: {type(image_b64_clean)}, length: {len(image_b64_clean)}")
+        logger.info(f"First 10 chars of base64: {image_b64_clean[:10]}, Last 10 chars: {image_b64_clean[-10:]}")
+        
+        # Call Bedrock converse API
+        # The 'bytes' field must be a base64-encoded string per AWS documentation
+        logger.info(f"Making Bedrock converse API call with model={model_id}, format={image_format}")
+        
+        response = client.converse(
+            modelId=model_id,
+            messages=[
                 {
                     'role': 'user',
                     'content': [
@@ -208,24 +232,19 @@ def analyze_betslip_image(image_bytes: bytes) -> str:
                             'image': {
                                 'format': image_format,
                                 'source': {
-                                    'bytes': image_b64,
+                                    'bytes': image_b64_clean,
                                 },
                             },
                         },
                     ],
                 },
             ],
-            'inferenceConfig': {
+            inferenceConfig={
                 'maxTokens': 4096,
                 'temperature': 0.0,
                 'topP': 0.9,
             },
-        }
-        
-        logger.info(f"Request payload image bytes type: {type(request_payload['messages'][0]['content'][1]['image']['source']['bytes'])}")
-        logger.info(f"Request payload image bytes length: {len(request_payload['messages'][0]['content'][1]['image']['source']['bytes'])}")
-        
-        response = client.converse(**request_payload)
+        )
         logger.info("Bedrock converse API call succeeded")
     except Exception as e:
         logger.error(f"Bedrock converse API call failed: {type(e).__name__}: {str(e)}")
