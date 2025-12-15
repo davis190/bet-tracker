@@ -17,15 +17,42 @@ def get_bedrock_client():
 
 
 def encode_image_to_base64(image_bytes: bytes) -> str:
-    """Encode raw image bytes to a base64 string."""
-    return base64.b64encode(image_bytes).decode("utf-8")
+    """
+    Encode raw image bytes to a base64 string.
+    
+    Returns a clean base64 string with no whitespace or newlines.
+    """
+    if not image_bytes:
+        raise ValueError("Cannot encode empty image bytes")
+    
+    # Validate that these look like image bytes (at least have a valid header)
+    if len(image_bytes) < 4:
+        raise ValueError("Image bytes are too short to be a valid image")
+    
+    encoded = base64.b64encode(image_bytes).decode("utf-8")
+    # Remove any whitespace that might have been introduced
+    return encoded.strip()
+
+
+def _is_valid_base64(s: str) -> bool:
+    """Check if a string is valid base64."""
+    try:
+        base64.b64decode(s, validate=True)
+        return True
+    except Exception:
+        return False
 
 
 def detect_image_format(image_bytes: bytes) -> str:
     """
     Detect image format from image bytes by checking magic bytes.
     
-    Returns: 'png', 'jpeg', 'gif', 'webp', or 'png' as default
+    Returns format string that matches Bedrock's expected format names:
+    - 'png' for PNG images
+    - 'jpeg' for JPEG images (Bedrock expects 'jpeg', not 'jpg')
+    - 'gif' for GIF images
+    - 'webp' for WebP images
+    - 'png' as default fallback
     """
     if len(image_bytes) < 12:
         return "png"  # Default fallback
@@ -35,6 +62,7 @@ def detect_image_format(image_bytes: bytes) -> str:
         return "png"
     
     # Check JPEG signature: FF D8 FF
+    # Note: Bedrock expects 'jpeg' format name
     if image_bytes[:3] == b"\xFF\xD8\xFF":
         return "jpeg"
     
@@ -43,7 +71,7 @@ def detect_image_format(image_bytes: bytes) -> str:
         return "gif"
     
     # Check WebP signature: RIFF...WEBP
-    if image_bytes[:4] == b"RIFF" and image_bytes[8:12] == b"WEBP":
+    if len(image_bytes) >= 12 and image_bytes[:4] == b"RIFF" and image_bytes[8:12] == b"WEBP":
         return "webp"
     
     # Default to png if unknown
@@ -107,43 +135,107 @@ def analyze_betslip_image(image_bytes: bytes) -> str:
 
     The calling code is responsible for validating and parsing this JSON.
     """
+    import logging
+    
+    logger = logging.getLogger()
+    
     model_id = os.environ.get("BEDROCK_MODEL_ID")
     if not model_id:
         raise ValueError("BEDROCK_MODEL_ID environment variable is not set")
+
+    # Validate that we have actual image bytes
+    if not image_bytes or len(image_bytes) < 12:
+        raise ValueError("Invalid image data: image bytes are empty or too small")
+    
+    # Log image metadata for debugging
+    logger.info(f"Image bytes length: {len(image_bytes)}")
+    logger.info(f"First 20 bytes (hex): {image_bytes[:20].hex()}")
+    logger.info(f"First 20 bytes (repr): {repr(image_bytes[:20])}")
+    
+    # Verify the bytes look like binary image data, not text
+    # Check if the first few bytes contain valid image magic numbers
+    # If it's all ASCII text, that's a problem
+    first_bytes = image_bytes[:min(100, len(image_bytes))]
+    is_text = all(32 <= b <= 126 or b in (9, 10, 13) for b in first_bytes[:50])
+    logger.info(f"Image bytes appear to be text: {is_text}")
+    
+    if is_text:
+        # This looks like text, not binary image data
+        logger.error(f"Image bytes look like text. First 100 chars: {image_bytes[:100]}")
+        raise ValueError("Image bytes appear to be text data rather than binary image data. Ensure image is properly decoded from base64.")
+    
+    # Detect format and validate it's a supported image format
+    image_format = detect_image_format(image_bytes)
+    logger.info(f"Detected image format: {image_format}")
+    
+    if image_format not in ['png', 'jpeg', 'gif', 'webp']:
+        raise ValueError(f"Unsupported image format detected. Expected PNG, JPEG, GIF, or WebP, but format detection failed.")
 
     client = get_bedrock_client()
 
     prompt = build_betslip_prompt()
     image_b64 = encode_image_to_base64(image_bytes)
-    image_format = detect_image_format(image_bytes)
+    
+    # Log base64 encoding details
+    logger.info(f"Base64 string length: {len(image_b64)}")
+    logger.info(f"Base64 string first 50 chars: {image_b64[:50]}")
+    logger.info(f"Base64 string is valid base64: {_is_valid_base64(image_b64)}")
 
     # Use the converse API for multimodal bet slip analysis
-    response = client.converse(
-        modelId=model_id,
-        messages=[
-            {
-                'role': 'user',
-                'content': [
-                    {
-                        'text': prompt,
-                    },
-                    {
-                        'image': {
-                            'format': image_format,
-                            'source': {
-                                'bytes': image_b64,
+    # According to AWS Bedrock API docs, the 'bytes' field should be a base64-encoded string
+    # boto3 will serialize this to JSON properly
+    logger.info(f"Calling Bedrock converse API with model {model_id}, format {image_format}")
+    logger.info(f"Image source structure: format={image_format}, bytes_type={type(image_b64)}, bytes_len={len(image_b64)}")
+    
+    # Ensure image_b64 is a string (not bytes)
+    if isinstance(image_b64, bytes):
+        image_b64 = image_b64.decode('utf-8')
+        logger.info("Converted image_b64 from bytes to string")
+    
+    try:
+        # Construct the request payload
+        # The 'bytes' field should be a base64-encoded string per AWS documentation
+        request_payload = {
+            'modelId': model_id,
+            'messages': [
+                {
+                    'role': 'user',
+                    'content': [
+                        {
+                            'text': prompt,
+                        },
+                        {
+                            'image': {
+                                'format': image_format,
+                                'source': {
+                                    'bytes': image_b64,
+                                },
                             },
                         },
-                    },
-                ],
+                    ],
+                },
+            ],
+            'inferenceConfig': {
+                'maxTokens': 4096,
+                'temperature': 0.0,
+                'topP': 0.9,
             },
-        ],
-        inferenceConfig={
-            'maxTokens': 4096,
-            'temperature': 0.0,
-            'topP': 0.9,
-        },
-    )
+        }
+        
+        logger.info(f"Request payload image bytes type: {type(request_payload['messages'][0]['content'][1]['image']['source']['bytes'])}")
+        logger.info(f"Request payload image bytes length: {len(request_payload['messages'][0]['content'][1]['image']['source']['bytes'])}")
+        
+        response = client.converse(**request_payload)
+        logger.info("Bedrock converse API call succeeded")
+    except Exception as e:
+        logger.error(f"Bedrock converse API call failed: {type(e).__name__}: {str(e)}")
+        logger.error(f"Request details: model={model_id}, format={image_format}, base64_len={len(image_b64)}")
+        logger.error(f"Image bytes first 100 hex: {image_bytes[:100].hex()}")
+        logger.error(f"Base64 first 100 chars: {image_b64[:100] if len(image_b64) >= 100 else image_b64}")
+        # Log the full exception for debugging
+        import traceback
+        logger.error(f"Full traceback: {traceback.format_exc()}")
+        raise
 
     # Extract text from converse API response
     # Response structure: output.message.content[0].text
