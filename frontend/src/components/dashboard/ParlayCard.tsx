@@ -175,7 +175,7 @@ export const ParlayCard: React.FC<ParlayCardProps> = ({ bet, onUpdate }) => {
         </span>
         {bet.attributedTo && (
           <span className="text-xs text-gray-500 dark:text-gray-400 italic">
-            Suggested by: {bet.attributedTo}
+            Bet by: {bet.attributedTo}
           </span>
         )}
       </div>
