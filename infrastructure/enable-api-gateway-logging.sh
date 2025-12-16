@@ -237,3 +237,4 @@ echo "API Gateway logging enabled successfully!"
 echo ""
 echo "Logs will appear in CloudWatch Log Group: $LOG_GROUP_NAME"
 echo "View logs at: https://console.aws.amazon.com/cloudwatch/home?region=${REGION}#logsV2:log-groups/log-group/${LOG_GROUP_NAME//\//\$252F}"
+

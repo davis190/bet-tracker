@@ -7,9 +7,10 @@ import { useAuth } from '../../contexts/AuthContext';
 interface ParlayCardProps {
   bet: Parlay;
   onUpdate?: () => void;
+  showActionButtons?: boolean;
 }
 
-export const ParlayCard: React.FC<ParlayCardProps> = ({ bet, onUpdate }) => {
+export const ParlayCard: React.FC<ParlayCardProps> = ({ bet, onUpdate, showActionButtons = false }) => {
   const { isAuthenticated } = useAuth();
   const [updatingLegId, setUpdatingLegId] = useState<string | null>(null);
 
@@ -120,7 +121,7 @@ export const ParlayCard: React.FC<ParlayCardProps> = ({ bet, onUpdate }) => {
                       {leg.attributedTo}
                     </span>
                   )}
-                  {isAuthenticated && (
+                  {showActionButtons && isAuthenticated && (
                     <div className="flex gap-1">
                       <button
                         onClick={() => updateLegStatus(leg.id, 'won')}
