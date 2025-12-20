@@ -64,19 +64,24 @@ def _handle_same_game_parlay_odds(legs: List[Dict[str, Any]], combined_odds: Opt
         if len(indices) < 2:
             continue  # Not a same game parlay if only one leg
         
+        # Get odds values for all legs in this group
+        leg_odds_values = []
+        for idx in indices:
+            odds = legs[idx].get("odds")
+            if odds is not None and odds != 0:
+                leg_odds_values.append((idx, odds))
+        
         # Check which legs have missing/null/zero odds
         missing_odds_indices = [
             idx for idx in indices 
             if legs[idx].get("odds") is None or legs[idx].get("odds") == 0
         ]
         
-        if not missing_odds_indices:
-            continue  # All legs already have odds
-        
         # Try to find combined odds for this group
         group_combined_odds = None
+        should_recalculate = False
         
-        # First, check if any leg in this group has combinedOdds field
+        # Case 1: Check if any leg in this group has combinedOdds field
         for idx in indices:
             leg = legs[idx]
             group_combined_odds = (
@@ -87,20 +92,37 @@ def _handle_same_game_parlay_odds(legs: List[Dict[str, Any]], combined_odds: Opt
             if group_combined_odds is not None:
                 break
         
-        # If not found in legs, use parlay-level combined odds if this is the only/largest group
+        # Case 2: If all legs have the same odds value, treat it as combined odds
+        # This handles cases where the model extracts the combined odds as individual odds
+        if group_combined_odds is None and len(leg_odds_values) == len(indices):
+            # Check if all legs have the exact same odds value
+            odds_values = [odds for _, odds in leg_odds_values]
+            if len(set(odds_values)) == 1:
+                # All legs have the same odds - this is likely the combined odds
+                group_combined_odds = odds_values[0]
+                should_recalculate = True
+        
+        # Case 3: Use parlay-level combined odds if available
         if group_combined_odds is None and combined_odds is not None and combined_odds != 0:
             # Use parlay-level combined odds if all legs in this group are missing odds
             if len(missing_odds_indices) == len(indices):
                 group_combined_odds = combined_odds
+                should_recalculate = True
         
         # Calculate and assign individual odds if we found combined odds
         if group_combined_odds is not None and group_combined_odds != 0:
             try:
                 # Calculate individual odds for all legs in the same game parlay
                 individual_odds = reverse_calculate_equal_odds(group_combined_odds, len(indices))
-                # Apply to all legs that are missing odds
-                for idx in missing_odds_indices:
-                    legs[idx]["odds"] = individual_odds
+                
+                if should_recalculate:
+                    # Replace odds for all legs in the group (they all had the combined odds)
+                    for idx in indices:
+                        legs[idx]["odds"] = individual_odds
+                else:
+                    # Only apply to legs that are missing odds
+                    for idx in missing_odds_indices:
+                        legs[idx]["odds"] = individual_odds
             except (ValueError, ZeroDivisionError):
                 # If calculation fails, we'll let validation catch it later
                 pass
