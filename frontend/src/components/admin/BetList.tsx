@@ -116,8 +116,12 @@ export const BetList: React.FC<BetListProps> = ({ refreshTrigger, onRefresh }) =
     setSaving(true);
     try {
       const updates: any = {};
+      const originalBet = bets.find(b => b.betId === editingBetId);
+      if (!originalBet) {
+        throw new Error('Original bet not found');
+      }
 
-      if (isSingleBet(editedBet) && isSingleBet(bets.find(b => b.betId === editingBetId))) {
+      if (isSingleBet(originalBet) && editedBet.type === 'single') {
         // Single bet updates
         if (editedBet.sport !== undefined) updates.sport = editedBet.sport;
         if (editedBet.teams !== undefined) updates.teams = editedBet.teams;
@@ -130,11 +134,11 @@ export const BetList: React.FC<BetListProps> = ({ refreshTrigger, onRefresh }) =
 
         // Recalculate potential payout if amount or odds changed
         if (editedBet.amount !== undefined || editedBet.odds !== undefined) {
-          const amount = editedBet.amount ?? (bets.find(b => b.betId === editingBetId) as SingleBet).amount;
-          const odds = editedBet.odds ?? (bets.find(b => b.betId === editingBetId) as SingleBet).odds;
+          const amount = editedBet.amount ?? originalBet.amount;
+          const odds = editedBet.odds ?? originalBet.odds;
           updates.potentialPayout = calculatePayout(amount, odds);
         }
-      } else if (isParlay(editedBet) && isParlay(bets.find(b => b.betId === editingBetId)) && editedLegs) {
+      } else if (isParlay(originalBet) && editedBet.type === 'parlay' && editedLegs) {
         // Parlay updates
         if (editedBet.amount !== undefined) updates.amount = editedBet.amount;
         if (editedBet.date !== undefined) updates.date = editedBet.date;
@@ -144,7 +148,7 @@ export const BetList: React.FC<BetListProps> = ({ refreshTrigger, onRefresh }) =
         updates.legs = editedLegs;
 
         // Recalculate potential payout if amount or legs changed
-        const amount = editedBet.amount ?? (bets.find(b => b.betId === editingBetId) as Parlay).amount;
+        const amount = editedBet.amount ?? originalBet.amount;
         updates.potentialPayout = calculateParlayPayout(amount, editedLegs);
       }
 
@@ -292,7 +296,7 @@ export const BetList: React.FC<BetListProps> = ({ refreshTrigger, onRefresh }) =
 
               {isSingleBet(bet) && (
                 <div className="space-y-2">
-                  {editingBetId === bet.betId && editedBet && isSingleBet(editedBet) ? (
+                  {editingBetId === bet.betId && editedBet && editedBet.type === 'single' ? (
                     <>
                       <div>
                         <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">Teams</label>
@@ -426,7 +430,7 @@ export const BetList: React.FC<BetListProps> = ({ refreshTrigger, onRefresh }) =
 
               {isParlay(bet) && (
                 <div className="space-y-2">
-                  {editingBetId === bet.betId && editedBet && isParlay(editedBet) && editedLegs ? (
+                  {editingBetId === bet.betId && editedBet && editedBet.type === 'parlay' && editedLegs ? (
                     <>
                       <div className="grid grid-cols-2 gap-2">
                         <div>
