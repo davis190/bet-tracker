@@ -28,9 +28,16 @@ def float_to_decimal(value: Any) -> Any:
     Convert float/int values to Decimal for DynamoDB storage.
     Recursively handles nested structures.
     Decimal values are left unchanged.
+    Booleans, strings, None, and other non-numeric types are preserved as-is.
     """
     if isinstance(value, Decimal):
         # Already a Decimal, return as-is
+        return value
+    elif isinstance(value, bool):
+        # Booleans should remain as booleans for DynamoDB
+        return value
+    elif isinstance(value, (str, type(None))):
+        # Strings and None should remain as-is
         return value
     elif isinstance(value, float) or isinstance(value, int):
         return Decimal(str(value))
