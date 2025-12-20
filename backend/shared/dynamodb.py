@@ -180,6 +180,14 @@ def get_bets_by_user(
     
     bets = response.get("Items", [])
     
+    # Handle pagination (DynamoDB query returns max 1MB, may need pagination)
+    while "LastEvaluatedKey" in response:
+        response = table.query(
+            KeyConditionExpression=key_condition,
+            ExclusiveStartKey=response["LastEvaluatedKey"]
+        )
+        bets.extend(response.get("Items", []))
+    
     # Apply filters
     if status:
         bets = [b for b in bets if b.get("status") == status]
@@ -426,7 +434,7 @@ def get_all_bets(
 
 def delete_bets_by_week(user_id: str) -> int:
     """
-    Delete all bets for the current week.
+    Delete all bets for the user (purges all bets).
     
     Args:
         user_id: User ID
@@ -434,7 +442,8 @@ def delete_bets_by_week(user_id: str) -> int:
     Returns:
         Number of bets deleted
     """
-    bets = get_bets_by_week(user_id)
+    # Get all bets for the user (no date filtering)
+    bets = get_bets_by_user(user_id)
     deleted_count = 0
     
     for bet in bets:
