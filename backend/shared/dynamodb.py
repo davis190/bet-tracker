@@ -171,12 +171,11 @@ def get_bets_by_user(
     """
     table = get_table()
     
-    # Query by user
-    key_condition = Key("PK").eq(f"USER#{user_id}")
+    # Query by user - SK is a sort key, so we can use begins_with in KeyConditionExpression
+    key_condition = Key("PK").eq(f"USER#{user_id}") & Key("SK").begins_with("BET#")
     
     response = table.query(
         KeyConditionExpression=key_condition,
-        FilterExpression=Attr("SK").begins_with("BET#"),
     )
     
     bets = response.get("Items", [])
