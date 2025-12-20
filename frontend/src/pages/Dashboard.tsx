@@ -104,9 +104,17 @@ export const Dashboard: React.FC = () => {
   // Filter bets by attribution
   const filteredBets = filterBetsByAttribution(bets);
   
-  // Show all bets regardless of status
-  const singleBets = filteredBets.filter(isSingleBet);
-  const parlays = filteredBets.filter(isParlay);
+  // Separate featured and non-featured bets
+  const featuredBets = filteredBets.filter(bet => bet.featured === true);
+  const nonFeaturedBets = filteredBets.filter(bet => !bet.featured);
+  
+  // Split featured bets by type
+  const featuredSingleBets = featuredBets.filter(isSingleBet);
+  const featuredParlays = featuredBets.filter(isParlay);
+  
+  // Split non-featured bets by type
+  const singleBets = nonFeaturedBets.filter(isSingleBet);
+  const parlays = nonFeaturedBets.filter(isParlay);
   
   const allAttributions = getAllAttributions();
 
@@ -171,6 +179,41 @@ export const Dashboard: React.FC = () => {
                 </div>
               </div>
             )}
+            
+            {/* Featured Bets Section */}
+            {featuredBets.length > 0 && (
+              <div className="mb-8">
+                <h2 className="text-2xl md:text-3xl font-bold mb-6 flex items-center gap-2">
+                  ⭐ Featured Bets
+                </h2>
+                {featuredSingleBets.length > 0 && (
+                  <div className="mb-6">
+                    <h3 className="text-xl md:text-2xl font-semibold mb-4">
+                      Single Bets {attributionFilter && `(${featuredSingleBets.length})`}
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {featuredSingleBets.map((bet) => (
+                        <BetCard key={bet.betId} bet={bet} />
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {featuredParlays.length > 0 && (
+                  <div>
+                    <h3 className="text-xl md:text-2xl font-semibold mb-4">
+                      Parlays {attributionFilter && `(${featuredParlays.length})`}
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {featuredParlays.map((bet) => (
+                        <ParlayCard key={bet.betId} bet={bet} onUpdate={loadBets} />
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+            
+            {/* Non-Featured Bets Section */}
             {singleBets.length > 0 && (
               <div>
                 <h3 className="text-xl md:text-2xl font-semibold mb-4">
@@ -197,7 +240,7 @@ export const Dashboard: React.FC = () => {
               </div>
             )}
 
-            {attributionFilter && singleBets.length === 0 && parlays.length === 0 && (
+            {attributionFilter && featuredBets.length === 0 && singleBets.length === 0 && parlays.length === 0 && (
               <div className="text-center py-12 text-gray-500 text-lg md:text-xl">
                 No bets found for "{attributionFilter}"
               </div>

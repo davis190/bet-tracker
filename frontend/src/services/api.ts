@@ -44,7 +44,7 @@ class ApiClient {
     return response.data.data;
   }
 
-  async updateBet(betId: string, updates: { status?: string; legs?: BetLeg[]; attributedTo?: string }): Promise<Bet> {
+  async updateBet(betId: string, updates: { status?: string; legs?: BetLeg[]; attributedTo?: string; featured?: boolean }): Promise<Bet> {
     const response = await this.client.put(`/bets/${betId}`, updates);
     return response.data.data;
   }

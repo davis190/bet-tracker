@@ -111,11 +111,13 @@ def build_betslip_prompt() -> str:
         '          "teams": "<teams or participants>",\n'
         '          "betType": "spread" | "moneyline" | "over/under" | "total",\n'
         '          "selection": "<short human-readable selection>",\n'
-        '          "odds": <american odds as number>,\n'
-        '          "attributedTo": "<person this leg is attributed to>" | null\n'
+        '          "odds": <american odds as number> | null,\n'
+        '          "attributedTo": "<person this leg is attributed to>" | null,\n'
+        '          "combinedOdds": <american odds as number> | null\n'
         "        }\n"
         "      ],\n"
-        '      "attributedTo": "<person this parlay is attributed to overall>" | null\n'
+        '      "attributedTo": "<person this parlay is attributed to overall>" | null,\n'
+        '      "combinedOdds": <american odds as number> | null\n'
         "    }\n"
         "  ]\n"
         "}\n\n"
@@ -124,6 +126,12 @@ def build_betslip_prompt() -> str:
         "- Use numeric types for amount and odds.\n"
         "- Use YYYY-MM-DD for date.\n"
         "- If a field is unknown, choose a reasonable best guess; do NOT omit required fields.\n"
+        "- For same game parlays (multiple bets from the same game/teams combined):\n"
+        "  * If individual leg odds are shown, include them in the 'odds' field for each leg.\n"
+        "  * If only combined odds are shown for the same game parlay, set individual leg 'odds' to null\n"
+        "    and include the combined odds in the 'combinedOdds' field at the leg level (for legs\n"
+        "    in that same game parlay) or at the parlay level. All legs in a same game parlay\n"
+        "    should have the same 'teams' field value.\n"
         "- Do NOT include any explanation text, only the JSON object."
     )
 

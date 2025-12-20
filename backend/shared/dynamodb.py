@@ -141,6 +141,12 @@ def create_bet(user_id: str, bet_data: Dict[str, Any], user_email: Optional[str]
         elif default_attribution:
             item["attributedTo"] = default_attribution
     
+    # Add featured flag if present (defaults to False if not provided)
+    if "featured" in bet_data:
+        item["featured"] = bool(bet_data["featured"])
+    else:
+        item["featured"] = False
+    
     # Convert entire item to ensure all floats are Decimal before writing to DynamoDB
     item = float_to_decimal(item)
     

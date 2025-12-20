@@ -2,6 +2,86 @@
 
 from typing import Dict, List, Any, Tuple, Optional
 import uuid
+import math
+
+
+def american_to_decimal_odds(odds: float) -> float:
+    """
+    Convert American odds to decimal odds.
+    
+    Args:
+        odds: American odds (e.g., -110, +200, 0)
+    
+    Returns:
+        Decimal odds (e.g., 1.909, 3.0)
+    
+    Raises:
+        ValueError: If odds is 0 or invalid
+    """
+    if odds == 0:
+        raise ValueError("Odds cannot be zero")
+    
+    if odds > 0:
+        return (odds / 100) + 1
+    else:
+        return (100 / abs(odds)) + 1
+
+
+def decimal_to_american_odds(decimal_odds: float) -> float:
+    """
+    Convert decimal odds to American odds.
+    
+    Args:
+        decimal_odds: Decimal odds (e.g., 1.909, 3.0)
+    
+    Returns:
+        American odds (e.g., -110, +200)
+    """
+    if decimal_odds <= 1.0:
+        raise ValueError("Decimal odds must be greater than 1.0")
+    
+    if decimal_odds >= 2.0:
+        # Positive American odds
+        return (decimal_odds - 1) * 100
+    else:
+        # Negative American odds
+        return -100 / (decimal_odds - 1)
+
+
+def reverse_calculate_equal_odds(combined_odds: float, num_legs: int) -> float:
+    """
+    Reverse calculate individual odds from combined odds, assuming equal odds for all legs.
+    
+    For a parlay with N legs, if the combined decimal odds is D, and each leg has decimal odds O:
+    D = O^N
+    Therefore: O = D^(1/N)
+    
+    Args:
+        combined_odds: Combined American odds for the parlay
+        num_legs: Number of legs in the parlay
+    
+    Returns:
+        Individual American odds (assuming all legs have equal odds)
+    
+    Raises:
+        ValueError: If combined_odds is 0 or num_legs < 2
+    """
+    if combined_odds == 0:
+        raise ValueError("Combined odds cannot be zero")
+    
+    if num_legs < 2:
+        raise ValueError("Number of legs must be at least 2")
+    
+    # Convert combined American odds to decimal
+    combined_decimal = american_to_decimal_odds(combined_odds)
+    
+    # Calculate individual decimal odds (nth root)
+    individual_decimal = combined_decimal ** (1.0 / num_legs)
+    
+    # Convert back to American odds
+    individual_american = decimal_to_american_odds(individual_decimal)
+    
+    return round(individual_american, 2)
 
 
 def calculate_payout_from_odds(amount: float, odds: float) -> float:
@@ -15,6 +95,9 @@ def calculate_payout_from_odds(amount: float, odds: float) -> float:
     Returns:
         Potential payout amount
     """
+    if odds == 0:
+        raise ValueError("Odds cannot be zero")
+    
     if odds > 0:
         # Positive odds: (odds / 100) * amount + amount
         return (odds / 100) * amount + amount
@@ -44,10 +127,10 @@ def calculate_parlay_payout(amount: float, legs: List[Dict[str, Any]]) -> float:
         if odds is None:
             raise ValueError("Each leg must have odds")
         
-        if odds > 0:
-            decimal_odds = (odds / 100) + 1
-        else:
-            decimal_odds = (100 / abs(odds)) + 1
+        if odds == 0:
+            raise ValueError("Leg odds cannot be zero")
+        
+        decimal_odds = american_to_decimal_odds(odds)
         decimal_odds_list.append(decimal_odds)
     
     # Multiply all decimal odds

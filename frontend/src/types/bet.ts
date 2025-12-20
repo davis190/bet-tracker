@@ -29,6 +29,7 @@ export interface SingleBet {
   createdAt: string;
   updatedAt: string;
   attributedTo?: string; // Optional, name of person who suggested this bet
+  featured?: boolean; // Optional, if true, bet is featured on dashboard
 }
 
 export interface Parlay {
@@ -43,6 +44,7 @@ export interface Parlay {
   createdAt: string;
   updatedAt: string;
   attributedTo?: string; // Optional, name of person who suggested this parlay
+  featured?: boolean; // Optional, if true, bet is featured on dashboard
 }
 
 export type Bet = SingleBet | Parlay;

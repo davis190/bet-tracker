@@ -2,9 +2,10 @@
 
 import json
 import uuid
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Tuple, Optional
+from collections import defaultdict
 
-from .bet_validator import validate_single_bet, validate_parlay
+from .bet_validator import validate_single_bet, validate_parlay, reverse_calculate_equal_odds
 
 
 class BetSlipParserError(Exception):
@@ -37,6 +38,76 @@ def _normalize_single_bet(raw: Dict[str, Any]) -> Dict[str, Any]:
     return bet
 
 
+def _handle_same_game_parlay_odds(legs: List[Dict[str, Any]], combined_odds: Optional[float]) -> List[Dict[str, Any]]:
+    """
+    Handle same game parlay odds by reverse calculating individual odds from combined odds.
+    
+    Groups legs by teams (same game) and calculates individual odds for legs with missing odds.
+    
+    Args:
+        legs: List of leg dictionaries, some may have None/null odds
+        combined_odds: Combined odds for same game parlay legs at parlay level (if available)
+    
+    Returns:
+        List of legs with odds filled in where missing
+    """
+    # Group legs by teams (same game)
+    same_game_groups: Dict[str, List[int]] = defaultdict(list)
+    
+    for idx, leg in enumerate(legs):
+        teams = leg.get("teams", "")
+        if teams:  # Only group if teams field is present
+            same_game_groups[teams].append(idx)
+    
+    # Process each same game group
+    for teams, indices in same_game_groups.items():
+        if len(indices) < 2:
+            continue  # Not a same game parlay if only one leg
+        
+        # Check which legs have missing/null/zero odds
+        missing_odds_indices = [
+            idx for idx in indices 
+            if legs[idx].get("odds") is None or legs[idx].get("odds") == 0
+        ]
+        
+        if not missing_odds_indices:
+            continue  # All legs already have odds
+        
+        # Try to find combined odds for this group
+        group_combined_odds = None
+        
+        # First, check if any leg in this group has combinedOdds field
+        for idx in indices:
+            leg = legs[idx]
+            group_combined_odds = (
+                leg.get("combinedOdds") or 
+                leg.get("sameGameParlayOdds") or
+                group_combined_odds
+            )
+            if group_combined_odds is not None:
+                break
+        
+        # If not found in legs, use parlay-level combined odds if this is the only/largest group
+        if group_combined_odds is None and combined_odds is not None and combined_odds != 0:
+            # Use parlay-level combined odds if all legs in this group are missing odds
+            if len(missing_odds_indices) == len(indices):
+                group_combined_odds = combined_odds
+        
+        # Calculate and assign individual odds if we found combined odds
+        if group_combined_odds is not None and group_combined_odds != 0:
+            try:
+                # Calculate individual odds for all legs in the same game parlay
+                individual_odds = reverse_calculate_equal_odds(group_combined_odds, len(indices))
+                # Apply to all legs that are missing odds
+                for idx in missing_odds_indices:
+                    legs[idx]["odds"] = individual_odds
+            except (ValueError, ZeroDivisionError):
+                # If calculation fails, we'll let validation catch it later
+                pass
+    
+    return legs
+
+
 def _normalize_parlay_bet(raw: Dict[str, Any]) -> Dict[str, Any]:
     """Normalize and validate a parlay bet object with legs."""
     legs_in: List[Dict[str, Any]] = raw.get("legs") or []
@@ -58,6 +129,16 @@ def _normalize_parlay_bet(raw: Dict[str, Any]) -> Dict[str, Any]:
         if attributed_to:
             leg_copy["attributedTo"] = attributed_to
         legs.append(leg_copy)
+
+    # Check for same game parlay combined odds at the parlay level
+    combined_odds = (
+        raw.get("combinedOdds") or 
+        raw.get("sameGameParlayOdds") or
+        raw.get("parlayOdds")
+    )
+    
+    # Handle same game parlay odds calculation
+    legs = _handle_same_game_parlay_odds(legs, combined_odds)
 
     bet: Dict[str, Any] = {
         "type": "parlay",
@@ -143,5 +224,4 @@ def parse_bets_from_model_output(
             continue
 
     return valid_bets, warnings
-
 
