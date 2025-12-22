@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Bet, isSingleBet, isParlay } from '../types/bet';
+import { Bet, isSingleBet, isParlay, Parlay } from '../types/bet';
 import { apiClient } from '../services/api';
 import { BetCard } from '../components/dashboard/BetCard';
 import { ParlayCard } from '../components/dashboard/ParlayCard';
@@ -12,6 +12,7 @@ export const Dashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [attributionFilter, setAttributionFilter] = useState<string>('');
+  const [statusFilter, setStatusFilter] = useState<string>('');
   const { isAuthenticated } = useAuth();
 
   useEffect(() => {
@@ -50,6 +51,33 @@ export const Dashboard: React.FC = () => {
     });
     
     return Array.from(attributions).sort();
+  };
+
+  // Helper function to check if a parlay has any pending leg
+  const hasPendingLeg = (parlay: Parlay): boolean => {
+    return parlay.legs.some((leg) => !leg.status || leg.status === 'pending');
+  };
+
+  // Filter bets based on status
+  const filterBetsByStatus = (betsToFilter: Bet[]): Bet[] => {
+    if (!statusFilter) {
+      return betsToFilter;
+    }
+
+    return betsToFilter.filter((bet) => {
+      if (isSingleBet(bet)) {
+        // Single bet: match if status matches
+        return bet.status === statusFilter;
+      } else if (isParlay(bet)) {
+        // For pending: match if parlay status is pending OR any leg is pending
+        if (statusFilter === 'pending') {
+          return bet.status === 'pending' || hasPendingLeg(bet);
+        }
+        // For won/lost: match if parlay status matches
+        return bet.status === statusFilter;
+      }
+      return false;
+    });
   };
 
   // Filter bets based on attribution
@@ -101,16 +129,12 @@ export const Dashboard: React.FC = () => {
     );
   }
 
-  // Filter bets by attribution
-  const filteredBets = filterBetsByAttribution(bets);
+  // Filter bets by status first, then by attribution
+  const filteredBets = filterBetsByAttribution(filterBetsByStatus(bets));
   
   // Separate featured and non-featured bets
   const featuredBets = filteredBets.filter(bet => bet.featured === true);
   const nonFeaturedBets = filteredBets.filter(bet => !bet.featured);
-  
-  // Split featured bets by type
-  const featuredSingleBets = featuredBets.filter(isSingleBet);
-  const featuredParlays = featuredBets.filter(isParlay);
   
   // Split non-featured bets by type
   const singleBets = nonFeaturedBets.filter(isSingleBet);
@@ -150,9 +174,32 @@ export const Dashboard: React.FC = () => {
           </div>
         ) : (
           <div className="space-y-8">
-            {allAttributions.length > 0 && (
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 mb-6">
-                <div className="flex flex-wrap gap-4 items-center">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 mb-6">
+              <div className="flex flex-wrap gap-4 items-center">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Filter by Status:
+                </label>
+                <select
+                  className="rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                >
+                  <option value="">All Statuses</option>
+                  <option value="pending">Pending</option>
+                  <option value="won">Won</option>
+                  <option value="lost">Lost</option>
+                </select>
+                {statusFilter && (
+                  <button
+                    onClick={() => setStatusFilter('')}
+                    className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 underline"
+                  >
+                    Clear Status Filter
+                  </button>
+                )}
+              </div>
+              {allAttributions.length > 0 && (
+                <div className="flex flex-wrap gap-4 items-center mt-4">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                     Filter by Attribution:
                   </label>
@@ -173,43 +220,28 @@ export const Dashboard: React.FC = () => {
                       onClick={() => setAttributionFilter('')}
                       className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 underline"
                     >
-                      Clear Filter
+                      Clear Attribution Filter
                     </button>
                   )}
                 </div>
-              </div>
-            )}
+              )}
+            </div>
             
             {/* Featured Bets Section */}
             {featuredBets.length > 0 && (
               <div className="mb-8">
                 <h2 className="text-2xl md:text-3xl font-bold mb-6 flex items-center gap-2">
-                  ⭐ Featured Bets
+                  ⭐ Featured Bets {attributionFilter && `(${featuredBets.length})`}
                 </h2>
-                {featuredSingleBets.length > 0 && (
-                  <div className="mb-6">
-                    <h3 className="text-xl md:text-2xl font-semibold mb-4">
-                      Single Bets {attributionFilter && `(${featuredSingleBets.length})`}
-                    </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                      {featuredSingleBets.map((bet) => (
-                        <BetCard key={bet.betId} bet={bet} />
-                      ))}
-                    </div>
-                  </div>
-                )}
-                {featuredParlays.length > 0 && (
-                  <div>
-                    <h3 className="text-xl md:text-2xl font-semibold mb-4">
-                      Parlays {attributionFilter && `(${featuredParlays.length})`}
-                    </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                      {featuredParlays.map((bet) => (
-                        <ParlayCard key={bet.betId} bet={bet} onUpdate={loadBets} />
-                      ))}
-                    </div>
-                  </div>
-                )}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {featuredBets.map((bet) => (
+                    isSingleBet(bet) ? (
+                      <BetCard key={bet.betId} bet={bet} />
+                    ) : (
+                      <ParlayCard key={bet.betId} bet={bet} onUpdate={loadBets} />
+                    )
+                  ))}
+                </div>
               </div>
             )}
             
@@ -240,9 +272,14 @@ export const Dashboard: React.FC = () => {
               </div>
             )}
 
-            {attributionFilter && featuredBets.length === 0 && singleBets.length === 0 && parlays.length === 0 && (
+            {(statusFilter || attributionFilter) && featuredBets.length === 0 && singleBets.length === 0 && parlays.length === 0 && (
               <div className="text-center py-12 text-gray-500 text-lg md:text-xl">
-                No bets found for "{attributionFilter}"
+                {statusFilter && attributionFilter 
+                  ? `No bets found for status "${statusFilter}" and attribution "${attributionFilter}"`
+                  : statusFilter
+                  ? `No bets found for status "${statusFilter}"`
+                  : `No bets found for attribution "${attributionFilter}"`
+                }
               </div>
             )}
           </div>
