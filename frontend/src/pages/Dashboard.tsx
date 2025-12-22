@@ -197,34 +197,34 @@ export const Dashboard: React.FC = () => {
                     Clear Status Filter
                   </button>
                 )}
-              </div>
-              {allAttributions.length > 0 && (
-                <div className="flex flex-wrap gap-4 items-center mt-4">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Filter by Attribution:
-                  </label>
-                  <select
-                    className="rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                    value={attributionFilter}
-                    onChange={(e) => setAttributionFilter(e.target.value)}
-                  >
-                    <option value="">All Bets</option>
-                    {allAttributions.map((attr) => (
-                      <option key={attr} value={attr}>
-                        {attr}
-                      </option>
-                    ))}
-                  </select>
-                  {attributionFilter && (
-                    <button
-                      onClick={() => setAttributionFilter('')}
-                      className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 underline"
+                {allAttributions.length > 0 && (
+                  <>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 ml-4">
+                      Filter by Attribution:
+                    </label>
+                    <select
+                      className="rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                      value={attributionFilter}
+                      onChange={(e) => setAttributionFilter(e.target.value)}
                     >
-                      Clear Attribution Filter
-                    </button>
-                  )}
-                </div>
-              )}
+                      <option value="">All Bets</option>
+                      {allAttributions.map((attr) => (
+                        <option key={attr} value={attr}>
+                          {attr}
+                        </option>
+                      ))}
+                    </select>
+                    {attributionFilter && (
+                      <button
+                        onClick={() => setAttributionFilter('')}
+                        className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 underline"
+                      >
+                        Clear Attribution Filter
+                      </button>
+                    )}
+                  </>
+                )}
+              </div>
             </div>
             
             {/* Featured Bets Section */}
