@@ -88,7 +88,7 @@ export interface ExtractedSingleBet extends Partial<CreateSingleBetRequest> {
   _validationError?: string; // Optional validation error message
 }
 
-export interface ExtractedParlayBet extends Partial<CreateParlayRequest> {
+export interface ExtractedParlayBet extends Omit<Partial<CreateParlayRequest>, "legs"> {
   type: "parlay";
   legs?: Partial<Omit<BetLeg, "id">>[]; // Allow partial legs
   _validationError?: string; // Optional validation error message
