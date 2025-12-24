@@ -12,8 +12,12 @@ class BetSlipParserError(Exception):
     """Raised when the bet slip output cannot be parsed or validated."""
 
 
-def _normalize_single_bet(raw: Dict[str, Any]) -> Dict[str, Any]:
-    """Normalize and validate a single bet object."""
+def _normalize_single_bet(raw: Dict[str, Any], validate: bool = True) -> Tuple[Dict[str, Any], Optional[str]]:
+    """Normalize a single bet object, optionally validating it.
+    
+    Returns:
+        Tuple of (bet_dict, error_message). error_message is None if valid or validate=False.
+    """
     bet: Dict[str, Any] = {
         "type": "single",
         "amount": raw.get("amount"),
@@ -31,11 +35,11 @@ def _normalize_single_bet(raw: Dict[str, Any]) -> Dict[str, Any]:
     if attributed_to:
         bet["attributedTo"] = attributed_to
 
-    is_valid, error = validate_single_bet(bet)
-    if not is_valid:
-        raise BetSlipParserError(f"Invalid single bet: {error}")
-
-    return bet
+    if validate:
+        is_valid, error = validate_single_bet(bet)
+        if not is_valid:
+            return bet, error
+    return bet, None
 
 
 def _handle_same_game_parlay_odds(legs: List[Dict[str, Any]], combined_odds: Optional[float]) -> List[Dict[str, Any]]:
@@ -130,11 +134,29 @@ def _handle_same_game_parlay_odds(legs: List[Dict[str, Any]], combined_odds: Opt
     return legs
 
 
-def _normalize_parlay_bet(raw: Dict[str, Any]) -> Dict[str, Any]:
-    """Normalize and validate a parlay bet object with legs."""
+def _normalize_parlay_bet(raw: Dict[str, Any], validate: bool = True) -> Tuple[Dict[str, Any], Optional[str]]:
+    """Normalize a parlay bet object with legs, optionally validating it.
+    
+    Returns:
+        Tuple of (bet_dict, error_message). error_message is None if valid or validate=False.
+    """
     legs_in: List[Dict[str, Any]] = raw.get("legs") or []
     if not isinstance(legs_in, list):
-        raise BetSlipParserError("Parlay 'legs' must be a list")
+        if validate:
+            raise BetSlipParserError("Parlay 'legs' must be a list")
+        else:
+            # Return partial bet even if legs is not a list
+            bet: Dict[str, Any] = {
+                "type": "parlay",
+                "amount": raw.get("amount"),
+                "date": raw.get("date"),
+                "legs": [],
+                "status": raw.get("status", "pending"),
+            }
+            attributed_to = raw.get("attributedTo")
+            if attributed_to:
+                bet["attributedTo"] = attributed_to
+            return bet, "Parlay 'legs' must be a list"
 
     legs: List[Dict[str, Any]] = []
     for leg in legs_in:
@@ -174,21 +196,29 @@ def _normalize_parlay_bet(raw: Dict[str, Any]) -> Dict[str, Any]:
     if attributed_to:
         bet["attributedTo"] = attributed_to
 
-    is_valid, error = validate_parlay(bet)
-    if not is_valid:
-        raise BetSlipParserError(f"Invalid parlay bet: {error}")
+    if validate:
+        is_valid, error = validate_parlay(bet)
+        if not is_valid:
+            return bet, error
+    return bet, None
 
-    return bet
 
-
-def _normalize_bet(raw: Dict[str, Any]) -> Dict[str, Any]:
-    """Normalize a single raw bet dictionary into our internal representation."""
+def _normalize_bet(raw: Dict[str, Any], validate: bool = True) -> Tuple[Dict[str, Any], Optional[str]]:
+    """Normalize a single raw bet dictionary into our internal representation.
+    
+    Returns:
+        Tuple of (bet_dict, error_message). error_message is None if valid or validate=False.
+    """
     bet_type = (raw.get("type") or "").lower()
     if bet_type == "single":
-        return _normalize_single_bet(raw)
+        return _normalize_single_bet(raw, validate)
     if bet_type == "parlay":
-        return _normalize_parlay_bet(raw)
-    raise BetSlipParserError("Bet 'type' must be 'single' or 'parlay'")
+        return _normalize_parlay_bet(raw, validate)
+    if validate:
+        raise BetSlipParserError("Bet 'type' must be 'single' or 'parlay'")
+    else:
+        # Return a partial bet with error
+        return {"type": bet_type or "unknown", **raw}, "Bet 'type' must be 'single' or 'parlay'"
 
 
 def parse_bets_from_model_output(
@@ -239,12 +269,24 @@ def parse_bets_from_model_output(
                     raw_bet = dict(raw_bet)
                     raw_bet["legs"] = legs[:max_legs_per_parlay]
 
-            bet = _normalize_bet(raw_bet)
+            # Try to normalize without validation first to get partial data
+            bet, validation_error = _normalize_bet(raw_bet, validate=False)
+            
+            # Add validation error to bet if present
+            if validation_error:
+                bet["_validationError"] = validation_error
+                warnings.append(f"Bet {idx} has validation errors: {validation_error}")
+            
             valid_bets.append(bet)
         except BetSlipParserError as exc:
-            warnings.append(f"Bet {idx} skipped: {exc}")
+            # If normalization itself fails (e.g., JSON structure issues), still try to return partial data
+            if isinstance(raw_bet, dict):
+                partial_bet = dict(raw_bet)
+                partial_bet["_validationError"] = str(exc)
+                valid_bets.append(partial_bet)
+                warnings.append(f"Bet {idx} has parsing errors: {exc}")
+            else:
+                warnings.append(f"Bet {idx} skipped: {exc}")
             continue
 
     return valid_bets, warnings
-
-

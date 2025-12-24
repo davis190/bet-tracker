@@ -82,8 +82,18 @@ export interface CreateParlayRequest {
 export type CreateBetRequest = CreateSingleBetRequest | CreateParlayRequest;
 
 // Types for bets extracted from a bet slip image via Bedrock
-export type ExtractedSingleBet = CreateSingleBetRequest;
-export type ExtractedParlayBet = CreateParlayRequest;
+// These allow partial data with optional fields for editing
+export interface ExtractedSingleBet extends Partial<CreateSingleBetRequest> {
+  type: "single";
+  _validationError?: string; // Optional validation error message
+}
+
+export interface ExtractedParlayBet extends Partial<CreateParlayRequest> {
+  type: "parlay";
+  legs?: Partial<Omit<BetLeg, "id">>[]; // Allow partial legs
+  _validationError?: string; // Optional validation error message
+}
+
 export type ExtractedBet = ExtractedSingleBet | ExtractedParlayBet;
 
 
