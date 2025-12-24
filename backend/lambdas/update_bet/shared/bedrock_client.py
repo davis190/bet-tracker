@@ -123,8 +123,11 @@ def build_betslip_prompt() -> str:
         "- Always return an object with a top-level 'bets' array (possibly empty).\n"
         "- Use numeric types for amount and odds.\n"
         "- Use YYYY-MM-DD for date.\n"
+        "- If you don't know something, leave it blank. Do not make up information.\n"
         "- If a field is unknown, choose a reasonable best guess; do NOT omit required fields.\n"
-        "- Do NOT include any explanation text, only the JSON object."
+        "- Do NOT include any explanation text, only the JSON object.\n"
+        "- Every bet needs to have a dollar amount. If there is only one dollar amount on the image, it is a single bet if it has one leg or a parlay if it has multiple legs.\n"
+        "- Look for clues and title on the image telling you that is a X-leg parlay where X is a number.\n"
     )
 
 
