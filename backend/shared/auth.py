@@ -58,3 +58,36 @@ def get_username_from_email(email: Optional[str]) -> Optional[str]:
         return None
     return email.split("@")[0]
 
+
+def check_feature_flag(user_id: str, flag_name: str) -> bool:
+    """
+    Check if user has a specific feature flag enabled.
+    
+    Args:
+        user_id: Cognito user ID
+        flag_name: Name of the feature flag to check
+    
+    Returns:
+        True if flag is enabled, False otherwise
+    """
+    try:
+        from .user_service import check_feature_flag as _check_feature_flag
+        return _check_feature_flag(user_id, flag_name)
+    except Exception:
+        return False
+
+
+def require_feature_flag(user_id: str, flag_name: str) -> None:
+    """
+    Require a feature flag to be enabled, raise exception if not.
+    
+    Args:
+        user_id: Cognito user ID
+        flag_name: Name of the feature flag to check
+    
+    Raises:
+        PermissionError: If the feature flag is not enabled
+    """
+    if not check_feature_flag(user_id, flag_name):
+        raise PermissionError(f"Feature flag '{flag_name}' is required but not enabled for this user")
+

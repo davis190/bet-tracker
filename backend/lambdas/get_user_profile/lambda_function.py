@@ -1,4 +1,4 @@
-"""Lambda function to clear all bets for the current week."""
+"""Lambda function to get user profile with feature flags."""
 
 import sys
 import os
@@ -10,12 +10,12 @@ if os.path.exists(shared_path):
     sys.path.insert(0, shared_path)
 
 from shared.responses import success_response, error_response, options_response
-from shared.auth import get_user_id_from_event, require_feature_flag
-from shared.dynamodb import delete_bets_by_week
+from shared.auth import get_user_id_from_event, get_user_email_from_event
+from shared.user_service import get_or_create_user_profile
 
 
 def lambda_handler(event, context):
-    """Handle DELETE /bets/week/clear request."""
+    """Handle GET /users/profile request."""
     # Handle OPTIONS request for CORS preflight
     http_method = (
         event.get("httpMethod") 
@@ -26,24 +26,17 @@ def lambda_handler(event, context):
         return options_response()
     
     try:
-        # Get user ID from event
+        # Get user ID and email from event
         user_id = get_user_id_from_event(event)
         if not user_id:
             return error_response("Unauthorized", 401, "UNAUTHORIZED")
         
-        # Check feature flag
-        try:
-            require_feature_flag(user_id, "canClearWeek")
-        except PermissionError as e:
-            return error_response(str(e), 403, "FORBIDDEN")
+        user_email = get_user_email_from_event(event) or ""
         
-        # Delete bets for current week
-        deleted_count = delete_bets_by_week(user_id)
+        # Get or create user profile
+        profile = get_or_create_user_profile(user_id, user_email)
         
-        return success_response({
-            "message": "Week cleared successfully",
-            "deletedCount": deleted_count,
-        })
+        return success_response(profile)
     
     except Exception as e:
         print(f"Error: {str(e)}")

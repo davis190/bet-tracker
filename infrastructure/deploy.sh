@@ -61,6 +61,12 @@ BETS_TABLE_NAME=$(aws cloudformation describe-stacks \
   --output text \
   --region ${REGION})
 
+USERS_TABLE_NAME=$(aws cloudformation describe-stacks \
+  --stack-name ${PROJECT_NAME}-${ENVIRONMENT}-main \
+  --query 'Stacks[0].Outputs[?OutputKey==`UsersTableName`].OutputValue' \
+  --output text \
+  --region ${REGION})
+
 SAM_BUCKET_NAME=$(aws cloudformation describe-stacks \
   --stack-name ${PROJECT_NAME}-${ENVIRONMENT}-main \
   --query 'Stacks[0].Outputs[?OutputKey==`SamArtifactsBucketName`].OutputValue' \
@@ -166,6 +172,7 @@ sam deploy \
     ApiGatewayRootResourceId=${API_ROOT_ID} \
     AuthorizerId=${AUTHORIZER_ID} \
     BetsTableName=${BETS_TABLE_NAME} \
+    UsersTableName=${USERS_TABLE_NAME} \
     UserPoolId=${USER_POOL_ID} \
   --region ${REGION} \
   --no-fail-on-empty-changeset

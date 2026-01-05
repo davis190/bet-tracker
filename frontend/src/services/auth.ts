@@ -62,6 +62,10 @@ export const authService = {
         onFailure: (err: Error) => {
           reject(err);
         },
+        newPasswordRequired: (userAttributes: any, requiredAttributes: any) => {
+          // This will be handled by handleNewPasswordRequired
+          reject(new Error('NEW_PASSWORD_REQUIRED'));
+        },
       });
     });
   },
@@ -123,6 +127,98 @@ export const authService = {
         }
 
         resolve(session.getIdToken().getJwtToken());
+      });
+    });
+  },
+
+  async changePassword(oldPassword: string, newPassword: string): Promise<void> {
+    const cognitoUser = userPool.getCurrentUser();
+    if (!cognitoUser) {
+      throw new Error('No user session');
+    }
+
+    return new Promise((resolve, reject) => {
+      cognitoUser.getSession((err: Error | null, session: CognitoUserSession | null) => {
+        if (err || !session || !session.isValid()) {
+          reject(new Error('Invalid session'));
+          return;
+        }
+
+        cognitoUser.changePassword(oldPassword, newPassword, (err: Error | undefined) => {
+          if (err) {
+            reject(err);
+            return;
+          }
+          resolve();
+        });
+      });
+    });
+  },
+
+  async handleNewPasswordRequired(email: string, newPassword: string): Promise<{ user: AuthUser; tokens: AuthTokens }> {
+    return new Promise((resolve, reject) => {
+      const cognitoUser = new CognitoUser({
+        Username: email,
+        Pool: userPool,
+      });
+
+      cognitoUser.completeNewPasswordChallenge(newPassword, {}, {
+        onSuccess: (result: CognitoUserSession) => {
+          const idToken = result.getIdToken();
+          const payload = idToken.payload;
+          
+          resolve({
+            user: {
+              username: payload['cognito:username'] as string || email,
+              email: (payload.email as string) || email,
+              sub: payload.sub as string,
+            },
+            tokens: {
+              idToken: result.getIdToken().getJwtToken(),
+              accessToken: result.getAccessToken().getJwtToken(),
+              refreshToken: result.getRefreshToken().getToken(),
+            },
+          });
+        },
+        onFailure: (err: Error) => {
+          reject(err);
+        },
+      });
+    });
+  },
+
+  async forgotPassword(email: string): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const cognitoUser = new CognitoUser({
+        Username: email,
+        Pool: userPool,
+      });
+
+      cognitoUser.forgotPassword({
+        onSuccess: () => {
+          resolve();
+        },
+        onFailure: (err: Error) => {
+          reject(err);
+        },
+      });
+    });
+  },
+
+  async confirmPasswordReset(email: string, code: string, newPassword: string): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const cognitoUser = new CognitoUser({
+        Username: email,
+        Pool: userPool,
+      });
+
+      cognitoUser.confirmPassword(code, newPassword, {
+        onSuccess: () => {
+          resolve();
+        },
+        onFailure: (err: Error) => {
+          reject(err);
+        },
       });
     });
   },

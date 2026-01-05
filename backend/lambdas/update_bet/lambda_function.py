@@ -11,7 +11,7 @@ if os.path.exists(shared_path):
     sys.path.insert(0, shared_path)
 
 from shared.responses import success_response, error_response, options_response
-from shared.auth import get_user_id_from_event
+from shared.auth import get_user_id_from_event, require_feature_flag
 from shared.dynamodb import get_bet_by_id, update_bet
 
 
@@ -31,6 +31,12 @@ def lambda_handler(event, context):
         user_id = get_user_id_from_event(event)
         if not user_id:
             return error_response("Unauthorized", 401, "UNAUTHORIZED")
+        
+        # Check feature flag
+        try:
+            require_feature_flag(user_id, "canManageBets")
+        except PermissionError as e:
+            return error_response(str(e), 403, "FORBIDDEN")
         
         # Get bet ID from path parameters
         bet_id = event.get("pathParameters", {}).get("betId")

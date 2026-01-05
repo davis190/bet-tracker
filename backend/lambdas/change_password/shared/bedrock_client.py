@@ -1,0 +1,1 @@
+../../../shared/bedrock_client.py

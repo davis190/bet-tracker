@@ -1,4 +1,4 @@
-"""Lambda function to create a new bet."""
+"""Lambda function to update user profile (admin only)."""
 
 import sys
 import os
@@ -11,13 +11,12 @@ if os.path.exists(shared_path):
     sys.path.insert(0, shared_path)
 
 from shared.responses import success_response, error_response, options_response
-from shared.auth import get_user_id_from_event, get_user_email_from_event, require_feature_flag
-from shared.dynamodb import create_bet
-from shared.bet_validator import validate_bet, validate_single_bet, validate_parlay
+from shared.auth import get_user_id_from_event
+from shared.user_service import update_user_profile, is_admin
 
 
 def lambda_handler(event, context):
-    """Handle POST /bets request."""
+    """Handle PUT /users/profile request."""
     # Handle OPTIONS request for CORS preflight
     http_method = (
         event.get("httpMethod") 
@@ -28,18 +27,14 @@ def lambda_handler(event, context):
         return options_response()
     
     try:
-        # Get user ID and email from event
+        # Get user ID from event
         user_id = get_user_id_from_event(event)
         if not user_id:
             return error_response("Unauthorized", 401, "UNAUTHORIZED")
         
-        # Check feature flag
-        try:
-            require_feature_flag(user_id, "canCreateBets")
-        except PermissionError as e:
-            return error_response(str(e), 403, "FORBIDDEN")
-        
-        user_email = get_user_email_from_event(event)
+        # Check if user is admin
+        if not is_admin(user_id):
+            return error_response("Forbidden: Admin access required", 403, "FORBIDDEN")
         
         # Parse request body
         try:
@@ -47,15 +42,22 @@ def lambda_handler(event, context):
         except json.JSONDecodeError:
             return error_response("Invalid JSON in request body", 400, "INVALID_JSON")
         
-        # Validate bet data
-        is_valid, error_message = validate_bet(body)
-        if not is_valid:
-            return error_response(error_message, 400, "VALIDATION_ERROR")
+        # Get target user ID (defaults to self)
+        target_user_id = body.get("userId", user_id)
         
-        # Create bet
-        bet = create_bet(user_id, body, user_email)
+        # Extract updates (exclude userId from updates)
+        updates = {k: v for k, v in body.items() if k != "userId"}
         
-        return success_response(bet, 201)
+        if not updates:
+            return error_response("No updates provided", 400, "VALIDATION_ERROR")
+        
+        # Update user profile
+        updated_profile = update_user_profile(target_user_id, updates)
+        
+        if not updated_profile:
+            return error_response("User profile not found", 404, "NOT_FOUND")
+        
+        return success_response(updated_profile)
     
     except Exception as e:
         print(f"Error: {str(e)}")

@@ -14,7 +14,7 @@ shared_path = os.path.join(os.path.dirname(__file__), "..", "..", "shared")
 if os.path.exists(shared_path):
     sys.path.insert(0, shared_path)
 
-from shared.auth import get_user_id_from_event  # type: ignore
+from shared.auth import get_user_id_from_event, require_feature_flag  # type: ignore
 from shared.bedrock_client import analyze_betslip_image  # type: ignore
 from shared.betslip_parser import (  # type: ignore
     BetSlipParserError,
@@ -59,6 +59,12 @@ def lambda_handler(event, context):
         user_id = get_user_id_from_event(event)
         if not user_id:
             return error_response("Unauthorized", 401, "UNAUTHORIZED")
+        
+        # Check feature flag
+        try:
+            require_feature_flag(user_id, "canBetslipImport")
+        except PermissionError as e:
+            return error_response(str(e), 403, "FORBIDDEN")
 
         # Parse request body
         try:

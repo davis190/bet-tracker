@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { useUserProfile } from '../contexts/UserProfileContext';
 import { BetForm } from '../components/admin/BetForm';
 import { ParlayForm } from '../components/admin/ParlayForm';
 import { BetList } from '../components/admin/BetList';
@@ -9,10 +10,16 @@ import { useNavigate } from 'react-router-dom';
 
 export const Admin: React.FC = () => {
   const { logout, user } = useAuth();
+  const { hasFeatureFlag } = useUserProfile();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'add' | 'manage'>('add');
   const [betType, setBetType] = useState<'single' | 'parlay'>('single');
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+  const canCreateBets = hasFeatureFlag('canCreateBets');
+  const canManageBets = hasFeatureFlag('canManageBets');
+  const canClearWeek = hasFeatureFlag('canClearWeek');
+  const canBetslipImport = hasFeatureFlag('canBetslipImport');
 
   const handleLogout = async () => {
     await logout();
@@ -34,6 +41,12 @@ export const Admin: React.FC = () => {
             </div>
             <div className="flex items-center gap-4">
               <span className="text-sm text-gray-600 dark:text-gray-300">{user?.email}</span>
+              <button
+                onClick={() => navigate('/settings')}
+                className="px-4 py-2 text-sm text-gray-700 dark:text-gray-300 bg-gray-200 dark:bg-gray-700 rounded hover:bg-gray-300 dark:hover:bg-gray-600"
+              >
+                Settings
+              </button>
               <button
                 onClick={handleLogout}
                 className="px-4 py-2 text-sm text-white bg-indigo-600 rounded hover:bg-indigo-700"
@@ -73,52 +86,70 @@ export const Admin: React.FC = () => {
 
         {activeTab === 'add' && (
           <div className="space-y-6">
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-              <div className="mb-4">
-                <div className="flex gap-4">
-                  <button
-                    onClick={() => setBetType('single')}
-                    className={`px-4 py-2 rounded ${
-                      betType === 'single'
-                        ? 'bg-indigo-600 text-white'
-                        : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
-                    }`}
-                  >
-                    Single Bet
-                  </button>
-                  <button
-                    onClick={() => setBetType('parlay')}
-                    className={`px-4 py-2 rounded ${
-                      betType === 'parlay'
-                        ? 'bg-indigo-600 text-white'
-                        : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
-                    }`}
-                  >
-                    Parlay
-                  </button>
+            {canCreateBets && (
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                <div className="mb-4">
+                  <div className="flex gap-4">
+                    <button
+                      onClick={() => setBetType('single')}
+                      className={`px-4 py-2 rounded ${
+                        betType === 'single'
+                          ? 'bg-indigo-600 text-white'
+                          : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
+                      }`}
+                    >
+                      Single Bet
+                    </button>
+                    <button
+                      onClick={() => setBetType('parlay')}
+                      className={`px-4 py-2 rounded ${
+                        betType === 'parlay'
+                          ? 'bg-indigo-600 text-white'
+                          : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
+                      }`}
+                    >
+                      Parlay
+                    </button>
+                  </div>
                 </div>
+
+                {betType === 'single' ? (
+                  <BetForm onSuccess={handleSuccess} />
+                ) : (
+                  <ParlayForm onSuccess={handleSuccess} />
+                )}
               </div>
+            )}
 
-              {betType === 'single' ? (
-                <BetForm onSuccess={handleSuccess} />
-              ) : (
-                <ParlayForm onSuccess={handleSuccess} />
-              )}
-            </div>
+            {canBetslipImport && (
+              <BetSlipImport onImported={handleSuccess} />
+            )}
 
-            <BetSlipImport onImported={handleSuccess} />
+            {!canCreateBets && !canBetslipImport && (
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                <p className="text-gray-600 dark:text-gray-400">You don't have permission to create bets.</p>
+              </div>
+            )}
           </div>
         )}
 
         {activeTab === 'manage' && (
           <div className="space-y-6">
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-semibold">All Bets</h2>
-                <ClearWeekButton onSuccess={() => setRefreshTrigger((prev) => prev + 1)} />
+            {canManageBets ? (
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                <div className="flex justify-between items-center mb-4">
+                  <h2 className="text-xl font-semibold">All Bets</h2>
+                  {canClearWeek && (
+                    <ClearWeekButton onSuccess={() => setRefreshTrigger((prev) => prev + 1)} />
+                  )}
+                </div>
+                <BetList refreshTrigger={refreshTrigger} onRefresh={() => setRefreshTrigger((prev) => prev + 1)} />
               </div>
-              <BetList refreshTrigger={refreshTrigger} onRefresh={() => setRefreshTrigger((prev) => prev + 1)} />
-            </div>
+            ) : (
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                <p className="text-gray-600 dark:text-gray-400">You don't have permission to manage bets.</p>
+              </div>
+            )}
           </div>
         )}
       </main>

@@ -82,6 +82,36 @@ class ApiClient {
     const response = await this.client.post('/betslip/process', { imageBase64 });
     return response.data.data;
   }
+
+  async getUserProfile(): Promise<{
+    userId: string;
+    email: string;
+    role: 'user' | 'admin';
+    featureFlags: {
+      canCreateBets: boolean;
+      canManageBets: boolean;
+      canDeleteBets: boolean;
+      canClearWeek: boolean;
+      canBetslipImport: boolean;
+    };
+    createdAt?: string;
+    updatedAt?: string;
+  }> {
+    const response = await this.client.get('/users/profile');
+    return response.data.data;
+  }
+
+  async changePassword(oldPassword: string, newPassword: string): Promise<void> {
+    await this.client.post('/auth/change-password', { oldPassword, newPassword });
+  }
+
+  async forgotPassword(email: string): Promise<void> {
+    await this.client.post('/auth/forgot-password', { email });
+  }
+
+  async confirmPasswordReset(email: string, code: string, newPassword: string): Promise<void> {
+    await this.client.post('/auth/confirm-password-reset', { email, code, newPassword });
+  }
 }
 
 export const apiClient = new ApiClient();
