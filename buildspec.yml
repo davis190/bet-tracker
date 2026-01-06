@@ -76,6 +76,12 @@ phases:
           --output text \
           --region $AWS_REGION 2>/dev/null || echo "")
         
+        USERS_TABLE_NAME=$(aws cloudformation describe-stacks \
+          --stack-name ${PROJECT_NAME}-${ENVIRONMENT}-main \
+          --query 'Stacks[0].Outputs[?OutputKey==`UsersTableName`].OutputValue' \
+          --output text \
+          --region $AWS_REGION 2>/dev/null || echo "")
+        
         if [ -z "$API_GATEWAY_ID" ] || [ "$API_GATEWAY_ID" == "None" ]; then
           echo "ERROR: Could not retrieve ApiGatewayId from main stack"
           exit 1
@@ -88,10 +94,15 @@ phases:
           echo "ERROR: Could not retrieve CognitoAuthorizerId from main stack"
           exit 1
         fi
+        if [ -z "$USERS_TABLE_NAME" ] || [ "$USERS_TABLE_NAME" == "None" ]; then
+          echo "ERROR: Could not retrieve UsersTableName from main stack"
+          exit 1
+        fi
         
         echo "API Gateway ID: $API_GATEWAY_ID"
         echo "API Root Resource ID: $API_ROOT_ID"
         echo "Authorizer ID: $AUTHORIZER_ID"
+        echo "Users Table Name: $USERS_TABLE_NAME"
       - echo "Validating SAM template..."
       - cd ${CODEBUILD_SRC_DIR}
       - |
@@ -211,7 +222,7 @@ phases:
         fi
         sam package --template-file "$BUILT_TEMPLATE" --s3-bucket $SAM_BUCKET --output-template-file packaged.yaml --region $AWS_REGION
       - echo "Deploying Lambda functions with SAM..."
-      - sam deploy --template-file ${CODEBUILD_SRC_DIR}/packaged.yaml --stack-name ${PROJECT_NAME}-${ENVIRONMENT}-lambdas --capabilities CAPABILITY_IAM --parameter-overrides Environment=$ENVIRONMENT ProjectName=$PROJECT_NAME ApiGatewayId=$API_GATEWAY_ID ApiGatewayRootResourceId=$API_ROOT_ID AuthorizerId=$AUTHORIZER_ID BetsTableName=$BETS_TABLE_NAME UserPoolId=$USER_POOL_ID --region $AWS_REGION --no-fail-on-empty-changeset
+      - sam deploy --template-file ${CODEBUILD_SRC_DIR}/packaged.yaml --stack-name ${PROJECT_NAME}-${ENVIRONMENT}-lambdas --capabilities CAPABILITY_IAM --parameter-overrides Environment=$ENVIRONMENT ProjectName=$PROJECT_NAME ApiGatewayId=$API_GATEWAY_ID ApiGatewayRootResourceId=$API_ROOT_ID AuthorizerId=$AUTHORIZER_ID BetsTableName=$BETS_TABLE_NAME UsersTableName=$USERS_TABLE_NAME UserPoolId=$USER_POOL_ID --region $AWS_REGION --no-fail-on-empty-changeset
       - echo "Deploying frontend to S3..."
       - aws s3 sync ${CODEBUILD_SRC_DIR}/frontend/dist s3://$FRONTEND_BUCKET --delete
       - echo "Invalidating CloudFront cache..."
