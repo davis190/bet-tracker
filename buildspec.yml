@@ -82,20 +82,26 @@ phases:
           --output text \
           --region $AWS_REGION 2>/dev/null || echo "")
         
-        if [ -z "$API_GATEWAY_ID" ] || [ "$API_GATEWAY_ID" == "None" ]; then
+        if [ -z "$API_GATEWAY_ID" ] || [ "$API_GATEWAY_ID" = "None" ]; then
           echo "ERROR: Could not retrieve ApiGatewayId from main stack"
           exit 1
         fi
-        if [ -z "$API_ROOT_ID" ] || [ "$API_ROOT_ID" == "None" ]; then
+        if [ -z "$API_ROOT_ID" ] || [ "$API_ROOT_ID" = "None" ]; then
           echo "ERROR: Could not retrieve ApiGatewayRootResourceId from main stack"
           exit 1
         fi
-        if [ -z "$AUTHORIZER_ID" ] || [ "$AUTHORIZER_ID" == "None" ]; then
+        if [ -z "$AUTHORIZER_ID" ] || [ "$AUTHORIZER_ID" = "None" ]; then
           echo "ERROR: Could not retrieve CognitoAuthorizerId from main stack"
           exit 1
         fi
-        if [ -z "$USERS_TABLE_NAME" ] || [ "$USERS_TABLE_NAME" == "None" ]; then
+        if [ -z "$USERS_TABLE_NAME" ] || [ "$USERS_TABLE_NAME" = "None" ]; then
           echo "ERROR: Could not retrieve UsersTableName from main stack"
+          echo "Attempting to list all outputs from main stack for debugging:"
+          aws cloudformation describe-stacks \
+            --stack-name ${PROJECT_NAME}-${ENVIRONMENT}-main \
+            --query 'Stacks[0].Outputs[*].[OutputKey,OutputValue]' \
+            --output table \
+            --region $AWS_REGION 2>/dev/null || echo "Failed to describe stack"
           exit 1
         fi
         
@@ -160,7 +166,7 @@ phases:
           --region $AWS_REGION 2>/dev/null || echo "")
         
         # If custom domain not found in lambdas stack, try to get from main stack
-        if [ -z "$API_URL" ] || [ "$API_URL" == "None" ]; then
+        if [ -z "$API_URL" ] || [ "$API_URL" = "None" ]; then
           echo "Custom domain URL not found in lambdas stack, trying main stack..."
           DOMAIN_NAME=$(aws cloudformation describe-stacks \
             --stack-name ${PROJECT_NAME}-${ENVIRONMENT}-main \
