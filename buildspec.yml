@@ -122,13 +122,12 @@ phases:
       - |
         echo "Current directory: $(pwd)"
         # Check if we need to use container (for Python 3.12 runtime)
-        USE_CONTAINER=""
         if ! command -v python3.12 &> /dev/null; then
           echo "python3.12 not found, will use --use-container flag"
-          USE_CONTAINER="--use-container"
+          sam build --template infrastructure/cloudformation/lambda-functions.yaml --build-dir .aws-sam/build --use-container
+        else
+          sam build --template infrastructure/cloudformation/lambda-functions.yaml --build-dir .aws-sam/build
         fi
-        echo "Running SAM build..."
-        sam build --template infrastructure/cloudformation/lambda-functions.yaml --build-dir .aws-sam/build ${USE_CONTAINER}
         BUILD_EXIT_CODE=$?
         echo "SAM build exit code: $BUILD_EXIT_CODE"
         if [ $BUILD_EXIT_CODE -ne 0 ]; then
@@ -208,24 +207,50 @@ phases:
       - |
         echo "Packaging Lambda functions with SAM..."
         cd ${CODEBUILD_SRC_DIR}
-        # SAM build creates the template as template.yaml in the build directory
+        echo "Current directory: $(pwd)"
+        
+        # Check if SAM build directory exists, if not, run SAM build
         BUILT_TEMPLATE=".aws-sam/build/template.yaml"
         if [ ! -f "$BUILT_TEMPLATE" ]; then
-          echo "Built template not found at $BUILT_TEMPLATE, searching..."
-          echo "Contents of .aws-sam/build:"
-          ls -la .aws-sam/build/ 2>/dev/null || echo "Build directory does not exist"
-          echo "Searching for YAML files..."
-          BUILT_TEMPLATE=$(find .aws-sam/build -name "*.yaml" -type f 2>/dev/null | head -1)
-          if [ -z "$BUILT_TEMPLATE" ]; then
-            echo "ERROR: Could not find built template in .aws-sam/build/"
-            echo "Searching entire .aws-sam directory..."
-            find .aws-sam -name "*.yaml" -type f 2>/dev/null || echo "No YAML files found"
-            exit 1
+          echo "Built template not found at $BUILT_TEMPLATE"
+          echo "Checking if .aws-sam/build directory exists..."
+          if [ ! -d ".aws-sam/build" ]; then
+            echo "WARNING: .aws-sam/build directory does not exist. Running SAM build..."
+            # Check if we need to use container (for Python 3.12 runtime)
+            if ! command -v python3.12 &> /dev/null; then
+              echo "python3.12 not found, will use --use-container flag"
+              sam build --template infrastructure/cloudformation/lambda-functions.yaml --build-dir .aws-sam/build --use-container
+            else
+              sam build --template infrastructure/cloudformation/lambda-functions.yaml --build-dir .aws-sam/build
+            fi
+            BUILD_EXIT_CODE=$?
+            if [ $BUILD_EXIT_CODE -ne 0 ]; then
+              echo "ERROR: SAM build failed with exit code $BUILD_EXIT_CODE"
+              exit 1
+            fi
+          else
+            echo "Build directory exists but template.yaml not found. Searching for YAML files..."
+            ls -la .aws-sam/build/ || echo "Cannot list build directory"
+            BUILT_TEMPLATE=$(find .aws-sam/build -name "*.yaml" -type f 2>/dev/null | head -1)
+            if [ -z "$BUILT_TEMPLATE" ]; then
+              echo "ERROR: Could not find any YAML files in .aws-sam/build/"
+              echo "Searching entire .aws-sam directory..."
+              find .aws-sam -name "*.yaml" -type f 2>/dev/null || echo "No YAML files found"
+              exit 1
+            fi
+            echo "Found template at: $BUILT_TEMPLATE"
           fi
-          echo "Found template at: $BUILT_TEMPLATE"
         else
           echo "Using template at: $BUILT_TEMPLATE"
         fi
+        
+        # Verify the template file exists before packaging
+        if [ ! -f "$BUILT_TEMPLATE" ]; then
+          echo "ERROR: Template file does not exist at $BUILT_TEMPLATE"
+          exit 1
+        fi
+        
+        echo "Packaging SAM template from: $BUILT_TEMPLATE"
         sam package --template-file "$BUILT_TEMPLATE" --s3-bucket $SAM_BUCKET --output-template-file packaged.yaml --region $AWS_REGION
       - echo "Deploying Lambda functions with SAM..."
       - sam deploy --template-file ${CODEBUILD_SRC_DIR}/packaged.yaml --stack-name ${PROJECT_NAME}-${ENVIRONMENT}-lambdas --capabilities CAPABILITY_IAM --parameter-overrides Environment=$ENVIRONMENT ProjectName=$PROJECT_NAME ApiGatewayId=$API_GATEWAY_ID ApiGatewayRootResourceId=$API_ROOT_ID AuthorizerId=$AUTHORIZER_ID BetsTableName=$BETS_TABLE_NAME UsersTableName=$USERS_TABLE_NAME UserPoolId=$USER_POOL_ID --region $AWS_REGION --no-fail-on-empty-changeset
