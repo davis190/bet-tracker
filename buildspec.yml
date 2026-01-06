@@ -95,14 +95,10 @@ phases:
           exit 1
         fi
         if [ -z "$USERS_TABLE_NAME" ] || [ "$USERS_TABLE_NAME" = "None" ]; then
-          echo "ERROR: Could not retrieve UsersTableName from main stack"
-          echo "Attempting to list all outputs from main stack for debugging:"
-          aws cloudformation describe-stacks \
-            --stack-name ${PROJECT_NAME}-${ENVIRONMENT}-main \
-            --query 'Stacks[0].Outputs[*].[OutputKey,OutputValue]' \
-            --output table \
-            --region $AWS_REGION 2>/dev/null || echo "Failed to describe stack"
-          exit 1
+          echo "WARNING: Could not retrieve UsersTableName from main stack outputs"
+          echo "Constructing table name from naming pattern: ${PROJECT_NAME}-${ENVIRONMENT}-users"
+          USERS_TABLE_NAME="${PROJECT_NAME}-${ENVIRONMENT}-users"
+          echo "Using constructed UsersTableName: $USERS_TABLE_NAME"
         fi
         
         echo "API Gateway ID: $API_GATEWAY_ID"
