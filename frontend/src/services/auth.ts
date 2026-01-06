@@ -62,7 +62,7 @@ export const authService = {
         onFailure: (err: Error) => {
           reject(err);
         },
-        newPasswordRequired: (userAttributes: any, requiredAttributes: any) => {
+        newPasswordRequired: (_userAttributes: any, _requiredAttributes: any) => {
           // This will be handled by handleNewPasswordRequired
           reject(new Error('NEW_PASSWORD_REQUIRED'));
         },
