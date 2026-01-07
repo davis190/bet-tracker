@@ -155,12 +155,17 @@ def update_user_profile(user_id: str, updates: Dict[str, Any]) -> Optional[Dict[
     expression_attribute_values = {}
     expression_attribute_names = {}
     
+    # Check if featureFlags is explicitly provided - if so, use that value
+    # Otherwise, if role is being updated, we'll set featureFlags based on role defaults
+    has_explicit_feature_flags = "featureFlags" in updates
+    role_feature_flags = None
+    
     for key, value in updates.items():
         if key == "userId":
             continue  # Don't allow updating userId
         
         if key == "featureFlags":
-            # Handle feature flags update
+            # Handle feature flags update - explicit value takes precedence
             update_expression_parts.append("#featureFlags = :featureFlags")
             expression_attribute_names["#featureFlags"] = "featureFlags"
             expression_attribute_values[":featureFlags"] = value
@@ -170,19 +175,23 @@ def update_user_profile(user_id: str, updates: Dict[str, Any]) -> Optional[Dict[
             expression_attribute_names["#aliases"] = "aliases"
             expression_attribute_values[":aliases"] = value
         elif key == "role":
-            # When role changes, update feature flags to defaults for that role
+            # Update role
             update_expression_parts.append("#role = :role")
             expression_attribute_names["#role"] = "role"
             expression_attribute_values[":role"] = value
-            # Update feature flags based on new role
-            new_flags = get_default_feature_flags(value)
-            update_expression_parts.append("#featureFlags = :featureFlags")
-            expression_attribute_names["#featureFlags"] = "featureFlags"
-            expression_attribute_values[":featureFlags"] = new_flags
+            # Only update feature flags based on role if featureFlags was not explicitly provided
+            if not has_explicit_feature_flags:
+                role_feature_flags = get_default_feature_flags(value)
         else:
             update_expression_parts.append(f"#{key} = :{key}")
             expression_attribute_names[f"#{key}"] = key
             expression_attribute_values[f":{key}"] = value
+    
+    # If role was updated and featureFlags was not explicitly provided, update featureFlags now
+    if role_feature_flags is not None:
+        update_expression_parts.append("#featureFlags = :featureFlags")
+        expression_attribute_names["#featureFlags"] = "featureFlags"
+        expression_attribute_values[":featureFlags"] = role_feature_flags
     
     if not update_expression_parts:
         # No updates to make
