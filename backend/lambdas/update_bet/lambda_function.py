@@ -56,7 +56,9 @@ def lambda_handler(event, context):
         
         # Check edit permissions
         edit_permissions = check_can_edit_bet(user_id, existing_bet)
+        print(f"update_bet: user_id={user_id}, bet_id={bet_id}, edit_permissions={edit_permissions}")
         if not edit_permissions.get("can_edit_overall", False):
+            print(f"update_bet: Permission denied - can_edit_overall={edit_permissions.get('can_edit_overall')}")
             return error_response("Forbidden: You don't have permission to edit this bet", 403, "FORBIDDEN")
         
         # For parlays, check if user can edit specific parts

@@ -72,8 +72,11 @@ def check_feature_flag(user_id: str, flag_name: str) -> bool:
     """
     try:
         from .user_service import check_feature_flag as _check_feature_flag
-        return _check_feature_flag(user_id, flag_name)
-    except Exception:
+        result = _check_feature_flag(user_id, flag_name)
+        print(f"check_feature_flag: user_id={user_id}, flag_name={flag_name}, result={result}")
+        return result
+    except Exception as e:
+        print(f"check_feature_flag exception: user_id={user_id}, flag_name={flag_name}, error={str(e)}")
         return False
 
 
@@ -186,6 +189,10 @@ def check_can_edit_bet(user_id: str, bet: Dict) -> Dict[str, Any]:
     Check if user can edit a bet and which parts they can edit.
     Returns granular permissions for overall bet and individual legs.
     
+    Permissions are required for ALL bets, even your own.
+    - canEditBets: Global permission to edit any bet
+    - canEditBetsOwn: Permission to edit bets where attributedTo matches user's aliases
+    
     Args:
         user_id: Cognito user ID
         bet: Bet dictionary
@@ -199,6 +206,9 @@ def check_can_edit_bet(user_id: str, bet: Dict) -> Dict[str, Any]:
     
     # Global permission takes precedence
     has_global_edit = check_feature_flag(user_id, "canEditBets")
+    
+    # Debug logging
+    print(f"check_can_edit_bet: user_id={user_id}, has_global_edit={has_global_edit}, bet_id={bet.get('betId')}")
     
     if has_global_edit:
         # Can edit everything
@@ -286,6 +296,10 @@ def check_can_mark_win_loss(user_id: str, bet: Dict) -> Dict[str, Any]:
     """
     Check if user can mark bet/leg status as won/lost.
     Returns granular permissions for overall bet and individual legs.
+    
+    Permissions are required for ALL bets, even your own.
+    - canMarkBetWinLoss: Global permission to mark any bet's status
+    - canMarkBetWinLossOwn: Permission to mark status for bets where attributedTo matches user's aliases
     
     Args:
         user_id: Cognito user ID

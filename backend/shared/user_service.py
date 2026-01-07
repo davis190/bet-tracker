@@ -222,10 +222,13 @@ def check_feature_flag(user_id: str, flag_name: str) -> bool:
     """
     profile = get_user_profile(user_id)
     if not profile:
+        print(f"check_feature_flag: Profile not found for user_id={user_id}")
         return False
     
     feature_flags = profile.get("featureFlags", {})
-    return feature_flags.get(flag_name, False)
+    result = feature_flags.get(flag_name, False)
+    print(f"check_feature_flag: user_id={user_id}, flag_name={flag_name}, feature_flags={feature_flags}, result={result}")
+    return result
 
 
 def get_user_role(user_id: str) -> Optional[str]:

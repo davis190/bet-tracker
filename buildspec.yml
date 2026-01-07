@@ -137,8 +137,8 @@ phases:
           # ls -laR .aws-sam/build/ || echo "Cannot list build directory"
           echo "Searching for YAML files:"
           find .aws-sam/build -name "*.yaml" -type f || echo "No YAML files found"
-          echo "Searching for any files:"
-          find .aws-sam/build -type f || echo "No files found in build directory"
+          # echo "Searching for any files:"
+          #find .aws-sam/build -type f || echo "No files found in build directory"
         else
           echo "ERROR: Build directory .aws-sam/build does not exist"
           exit 1
