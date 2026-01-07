@@ -68,7 +68,7 @@ export const authService = {
           pendingPasswordResetUser = null;
           reject(err);
         },
-        newPasswordRequired: (userAttributes: any, requiredAttributes: any) => {
+        newPasswordRequired: (userAttributes: any, _requiredAttributes: any) => {
           // Store the cognitoUser instance and attributes so we can use them later
           pendingPasswordResetUser = { cognitoUser, email, userAttributes: userAttributes || {} };
           reject(new Error('NEW_PASSWORD_REQUIRED'));
