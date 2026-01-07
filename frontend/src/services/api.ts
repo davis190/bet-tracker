@@ -110,6 +110,33 @@ class ApiClient {
     return response.data.data;
   }
 
+  async listUsers(): Promise<{
+    userId: string;
+    email: string;
+    role: 'user' | 'admin';
+    featureFlags: {
+      canCreateBets: boolean;
+      canManageBets: boolean;
+      canDeleteBets: boolean;
+      canClearWeek: boolean;
+      canBetslipImport: boolean;
+      seeManageBetsPage?: boolean;
+      seeManageBetsPageOwn?: boolean;
+      canEditBets?: boolean;
+      canEditBetsOwn?: boolean;
+      canMarkBetFeatures?: boolean;
+      canMarkBetFeaturesOwn?: boolean;
+      canMarkBetWinLoss?: boolean;
+      canMarkBetWinLossOwn?: boolean;
+    };
+    aliases?: string[];
+    createdAt?: string;
+    updatedAt?: string;
+  }[]> {
+    const response = await this.client.get('/users');
+    return response.data.data.users;
+  }
+
   async updateUserProfile(updates: {
     userId?: string;
     email?: string;

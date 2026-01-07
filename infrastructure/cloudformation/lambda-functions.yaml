@@ -49,6 +49,7 @@ Resources:
       Environment:
         Variables:
           BETS_TABLE_NAME: !Ref BetsTableName
+          USERS_TABLE_NAME: !Ref UsersTableName
           COGNITO_USER_POOL_ID: !Ref UserPoolId
       Policies:
         - AWSLambdaBasicExecutionRole
@@ -83,6 +84,7 @@ Resources:
       Environment:
         Variables:
           BETS_TABLE_NAME: !Ref BetsTableName
+          USERS_TABLE_NAME: !Ref UsersTableName
           COGNITO_USER_POOL_ID: !Ref UserPoolId
       Policies:
         - AWSLambdaBasicExecutionRole
@@ -117,6 +119,7 @@ Resources:
       Environment:
         Variables:
           BETS_TABLE_NAME: !Ref BetsTableName
+          USERS_TABLE_NAME: !Ref UsersTableName
           COGNITO_USER_POOL_ID: !Ref UserPoolId
       Policies:
         - AWSLambdaBasicExecutionRole
@@ -151,6 +154,7 @@ Resources:
       Environment:
         Variables:
           BETS_TABLE_NAME: !Ref BetsTableName
+          USERS_TABLE_NAME: !Ref UsersTableName
           COGNITO_USER_POOL_ID: !Ref UserPoolId
       Policies:
         - AWSLambdaBasicExecutionRole
@@ -219,6 +223,7 @@ Resources:
       Environment:
         Variables:
           BETS_TABLE_NAME: !Ref BetsTableName
+          USERS_TABLE_NAME: !Ref UsersTableName
           COGNITO_USER_POOL_ID: !Ref UserPoolId
           BEDROCK_MODEL_ID: 'amazon.nova-pro-v1:0'
       Policies:
@@ -303,6 +308,30 @@ Resources:
               Action:
                 - dynamodb:GetItem
                 - dynamodb:UpdateItem
+              Resource:
+                - !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${UsersTableName}'
+
+  # List Users Lambda
+  ListUsersFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub '${ProjectName}-${Environment}-list-users'
+      CodeUri: ../../backend/lambdas/list_users/
+      Handler: lambda_function.lambda_handler
+      Runtime: python3.12
+      Timeout: 30
+      Environment:
+        Variables:
+          USERS_TABLE_NAME: !Ref UsersTableName
+          COGNITO_USER_POOL_ID: !Ref UserPoolId
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:Scan
+                - dynamodb:GetItem
               Resource:
                 - !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${UsersTableName}'
 
@@ -875,6 +904,74 @@ Resources:
             method.response.header.Access-Control-Allow-Methods: true
             method.response.header.Access-Control-Allow-Credentials: true
 
+  # OPTIONS /users (CORS preflight)
+  ListUsersOptionsMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref ApiGatewayId
+      ResourceId: !Ref UsersResource
+      HttpMethod: OPTIONS
+      AuthorizationType: NONE
+      Integration:
+        Type: MOCK
+        RequestTemplates:
+          application/json: '{"statusCode": 200}'
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Origin: "'https://bets.claytondavis.dev'"
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+              method.response.header.Access-Control-Allow-Methods: "'GET,POST,PUT,DELETE,OPTIONS'"
+              method.response.header.Access-Control-Allow-Credentials: "'true'"
+            ResponseTemplates:
+              application/json: ''
+      MethodResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: true
+            method.response.header.Access-Control-Allow-Headers: true
+            method.response.header.Access-Control-Allow-Methods: true
+            method.response.header.Access-Control-Allow-Credentials: true
+
+  # GET /users
+  ListUsersMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref ApiGatewayId
+      ResourceId: !Ref UsersResource
+      HttpMethod: GET
+      AuthorizationType: COGNITO_USER_POOLS
+      AuthorizerId: !Ref AuthorizerId
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ListUsersFunction.Arn}/invocations'
+      MethodResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: true
+            method.response.header.Access-Control-Allow-Headers: true
+            method.response.header.Access-Control-Allow-Methods: true
+            method.response.header.Access-Control-Allow-Credentials: true
+        - StatusCode: 401
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: true
+            method.response.header.Access-Control-Allow-Headers: true
+            method.response.header.Access-Control-Allow-Methods: true
+            method.response.header.Access-Control-Allow-Credentials: true
+        - StatusCode: 403
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: true
+            method.response.header.Access-Control-Allow-Headers: true
+            method.response.header.Access-Control-Allow-Methods: true
+            method.response.header.Access-Control-Allow-Credentials: true
+        - StatusCode: 500
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: true
+            method.response.header.Access-Control-Allow-Headers: true
+            method.response.header.Access-Control-Allow-Methods: true
+            method.response.header.Access-Control-Allow-Credentials: true
+
   # OPTIONS /auth/change-password (CORS preflight)
   ChangePasswordOptionsMethod:
     Type: AWS::ApiGateway::Method
@@ -1017,6 +1114,14 @@ Resources:
       Principal: apigateway.amazonaws.com
       SourceArn: !Sub 'arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiGatewayId}/*/*'
 
+  ListUsersPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref ListUsersFunction
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub 'arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiGatewayId}/*/*'
+
   # API Gateway Deployment
   # Note: StageDescription is updated to force new deployment when methods change
   ApiGatewayDeployment:
@@ -1035,6 +1140,8 @@ Resources:
       - GetUserProfileOptionsMethod
       - GetUserProfileMethod
       - UpdateUserProfileMethod
+      - ListUsersOptionsMethod
+      - ListUsersMethod
       - ChangePasswordOptionsMethod
       - ChangePasswordMethod
     Properties:

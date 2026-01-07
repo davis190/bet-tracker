@@ -281,3 +281,27 @@ def get_user_aliases(user_id: str) -> List[str]:
     
     return aliases
 
+
+def list_all_users() -> List[Dict[str, Any]]:
+    """
+    List all users from the Users table.
+    
+    Returns:
+        List of all user profiles
+    """
+    table = get_users_table()
+    
+    try:
+        response = table.scan()
+        users = response.get("Items", [])
+        
+        # Handle pagination (DynamoDB scan returns max 1MB, may need pagination)
+        while "LastEvaluatedKey" in response:
+            response = table.scan(ExclusiveStartKey=response["LastEvaluatedKey"])
+            users.extend(response.get("Items", []))
+        
+        return users
+    except ClientError as e:
+        print(f"Error scanning users table: {str(e)}")
+        return []
+

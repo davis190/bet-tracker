@@ -6,6 +6,7 @@ import { Dashboard } from './pages/Dashboard';
 import { Login } from './pages/Login';
 import { Admin } from './pages/Admin';
 import { Settings } from './pages/Settings';
+import { UserManagement } from './pages/UserManagement';
 
 function App() {
   return (
@@ -28,6 +29,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <Settings />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/user-management"
+              element={
+                <ProtectedRoute>
+                  <UserManagement />
                 </ProtectedRoute>
               }
             />

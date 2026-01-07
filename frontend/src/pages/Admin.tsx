@@ -10,7 +10,7 @@ import { useNavigate } from 'react-router-dom';
 
 export const Admin: React.FC = () => {
   const { logout, user } = useAuth();
-  const { hasFeatureFlag, canSeeManageBetsPage } = useUserProfile();
+  const { hasFeatureFlag, canSeeManageBetsPage, isAdmin } = useUserProfile();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'add' | 'manage'>('add');
   const [betType, setBetType] = useState<'single' | 'parlay'>('single');
@@ -41,6 +41,14 @@ export const Admin: React.FC = () => {
             </div>
             <div className="flex items-center gap-4">
               <span className="text-sm text-gray-600 dark:text-gray-300">{user?.email}</span>
+              {isAdmin && (
+                <button
+                  onClick={() => navigate('/user-management')}
+                  className="px-4 py-2 text-sm text-gray-700 dark:text-gray-300 bg-gray-200 dark:bg-gray-700 rounded hover:bg-gray-300 dark:hover:bg-gray-600"
+                >
+                  User Management
+                </button>
+              )}
               <button
                 onClick={() => navigate('/settings')}
                 className="px-4 py-2 text-sm text-gray-700 dark:text-gray-300 bg-gray-200 dark:bg-gray-700 rounded hover:bg-gray-300 dark:hover:bg-gray-600"
