@@ -11,7 +11,13 @@ if os.path.exists(shared_path):
     sys.path.insert(0, shared_path)
 
 from shared.responses import success_response, error_response, options_response
-from shared.auth import get_user_id_from_event, require_feature_flag
+from shared.auth import (
+    get_user_id_from_event,
+    check_can_edit_bet,
+    check_can_mark_featured,
+    check_can_mark_win_loss,
+    check_feature_flag,
+)
 from shared.dynamodb import get_bet_by_id, update_bet
 
 
@@ -32,12 +38,6 @@ def lambda_handler(event, context):
         if not user_id:
             return error_response("Unauthorized", 401, "UNAUTHORIZED")
         
-        # Check feature flag
-        try:
-            require_feature_flag(user_id, "canManageBets")
-        except PermissionError as e:
-            return error_response(str(e), 403, "FORBIDDEN")
-        
         # Get bet ID from path parameters
         bet_id = event.get("pathParameters", {}).get("betId")
         if not bet_id:
@@ -53,6 +53,84 @@ def lambda_handler(event, context):
             updates = json.loads(event.get("body", "{}"))
         except json.JSONDecodeError:
             return error_response("Invalid JSON in request body", 400, "INVALID_JSON")
+        
+        # Check edit permissions
+        edit_permissions = check_can_edit_bet(user_id, existing_bet)
+        if not edit_permissions.get("can_edit_overall", False):
+            return error_response("Forbidden: You don't have permission to edit this bet", 403, "FORBIDDEN")
+        
+        # For parlays, check if user can edit specific parts
+        bet_type = existing_bet.get("type", "single")
+        if bet_type == "parlay":
+            can_edit_legs = edit_permissions.get("can_edit_legs", [])
+            # Check if user is trying to update legs they can't edit
+            if "legs" in updates:
+                if not isinstance(updates["legs"], list):
+                    return error_response("Legs must be a list", 400, "INVALID_LEGS")
+                
+                existing_legs = existing_bet.get("legs", [])
+                if len(updates["legs"]) != len(existing_legs):
+                    return error_response("Cannot change number of legs", 400, "INVALID_LEGS")
+                
+                # Check each leg that's being updated
+                for i, updated_leg in enumerate(updates["legs"]):
+                    if not can_edit_legs[i]:
+                        # User is trying to edit a leg they don't have permission for
+                        # Check if they're actually changing anything
+                        existing_leg = existing_legs[i]
+                        # Compare key fields that can be edited
+                        leg_changed = False
+                        for key in ["teams", "sport", "betType", "selection", "odds", "attributedTo"]:
+                            if updated_leg.get(key) != existing_leg.get(key):
+                                leg_changed = True
+                                break
+                        
+                        if leg_changed:
+                            return error_response(
+                                f"Forbidden: You don't have permission to edit leg {i+1}",
+                                403,
+                                "FORBIDDEN"
+                            )
+                
+                # Check if user is trying to update overall parlay fields they can't edit
+                if not edit_permissions.get("can_edit_overall", False):
+                    # Check if any overall fields are being updated
+                    overall_fields = ["amount", "date", "attributedTo"]
+                    for field in overall_fields:
+                        if field in updates:
+                            return error_response(
+                                f"Forbidden: You don't have permission to edit the parlay's {field}",
+                                403,
+                                "FORBIDDEN"
+                            )
+        
+        # Check permission to mark as featured
+        if "featured" in updates:
+            if not check_can_mark_featured(user_id, existing_bet):
+                return error_response("Forbidden: You don't have permission to mark this bet as featured", 403, "FORBIDDEN")
+        
+        # Check permission to mark win/loss
+        if "status" in updates:
+            win_loss_permissions = check_can_mark_win_loss(user_id, existing_bet)
+            if not win_loss_permissions.get("can_mark_overall", False):
+                return error_response("Forbidden: You don't have permission to mark this bet's status", 403, "FORBIDDEN")
+        
+        # Check permission to mark leg statuses (for parlays)
+        if "legs" in updates and bet_type == "parlay":
+            win_loss_permissions = check_can_mark_win_loss(user_id, existing_bet)
+            can_mark_legs = win_loss_permissions.get("can_mark_legs", [])
+            existing_legs = existing_bet.get("legs", [])
+            
+            for i, updated_leg in enumerate(updates["legs"]):
+                if "status" in updated_leg:
+                    if i >= len(can_mark_legs) or not can_mark_legs[i]:
+                        existing_leg_status = existing_legs[i].get("status", "pending")
+                        if updated_leg.get("status") != existing_leg_status:
+                            return error_response(
+                                f"Forbidden: You don't have permission to mark leg {i+1}'s status",
+                                403,
+                                "FORBIDDEN"
+                            )
         
         # Validate status if provided
         if "status" in updates:

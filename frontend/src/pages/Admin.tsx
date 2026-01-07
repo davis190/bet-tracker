@@ -10,14 +10,14 @@ import { useNavigate } from 'react-router-dom';
 
 export const Admin: React.FC = () => {
   const { logout, user } = useAuth();
-  const { hasFeatureFlag } = useUserProfile();
+  const { hasFeatureFlag, canSeeManageBetsPage } = useUserProfile();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'add' | 'manage'>('add');
   const [betType, setBetType] = useState<'single' | 'parlay'>('single');
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   const canCreateBets = hasFeatureFlag('canCreateBets');
-  const canManageBets = hasFeatureFlag('canManageBets');
+  const canSeeManagePage = canSeeManageBetsPage();
   const canClearWeek = hasFeatureFlag('canClearWeek');
   const canBetslipImport = hasFeatureFlag('canBetslipImport');
 
@@ -135,7 +135,7 @@ export const Admin: React.FC = () => {
 
         {activeTab === 'manage' && (
           <div className="space-y-6">
-            {canManageBets ? (
+            {canSeeManagePage ? (
               <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
                 <div className="flex justify-between items-center mb-4">
                   <h2 className="text-xl font-semibold">All Bets</h2>

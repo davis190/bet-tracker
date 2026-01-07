@@ -93,11 +93,31 @@ class ApiClient {
       canDeleteBets: boolean;
       canClearWeek: boolean;
       canBetslipImport: boolean;
+      seeManageBetsPage?: boolean;
+      seeManageBetsPageOwn?: boolean;
+      canEditBets?: boolean;
+      canEditBetsOwn?: boolean;
+      canMarkBetFeatures?: boolean;
+      canMarkBetFeaturesOwn?: boolean;
+      canMarkBetWinLoss?: boolean;
+      canMarkBetWinLossOwn?: boolean;
     };
+    aliases?: string[];
     createdAt?: string;
     updatedAt?: string;
   }> {
     const response = await this.client.get('/users/profile');
+    return response.data.data;
+  }
+
+  async updateUserProfile(updates: {
+    userId?: string;
+    email?: string;
+    role?: 'user' | 'admin';
+    featureFlags?: Record<string, boolean>;
+    aliases?: string[];
+  }): Promise<any> {
+    const response = await this.client.put('/users/profile', updates);
     return response.data.data;
   }
 

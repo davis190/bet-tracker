@@ -10,7 +10,7 @@ if os.path.exists(shared_path):
     sys.path.insert(0, shared_path)
 
 from shared.responses import success_response, error_response, options_response
-from shared.auth import get_user_id_from_event
+from shared.auth import get_user_id_from_event, check_can_see_manage_bets_page, _is_bet_visible_to_user, _get_user_aliases
 from shared.dynamodb import get_bets_by_user, get_all_bets
 
 
@@ -41,8 +41,14 @@ def lambda_handler(event, context):
         end_date = query_params.get("endDate")
         bet_type = query_params.get("type")
         
-        # If authenticated, get user's bets; otherwise get all bets (public view)
+        # If authenticated, check permissions and get bets
         if user_id:
+            # Check if user can see manage bets page
+            can_see = check_can_see_manage_bets_page(user_id)
+            if not can_see:
+                return error_response("Forbidden: You don't have permission to view bets", 403, "FORBIDDEN")
+            
+            # Get user's bets
             bets = get_bets_by_user(
                 user_id=user_id,
                 status=status,
@@ -50,6 +56,19 @@ def lambda_handler(event, context):
                 end_date=end_date,
                 bet_type=bet_type,
             )
+            
+            # If user only has "Own" permission, filter bets by visibility
+            has_global_permission = False
+            try:
+                from shared.auth import check_feature_flag
+                has_global_permission = check_feature_flag(user_id, "seeManageBetsPage")
+            except Exception:
+                pass
+            
+            if not has_global_permission:
+                # User has "Own" permission - filter bets
+                user_aliases = _get_user_aliases(user_id)
+                bets = [bet for bet in bets if _is_bet_visible_to_user(bet, user_aliases)]
         else:
             # Public access - get all bets
             bets = get_all_bets(

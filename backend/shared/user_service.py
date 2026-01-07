@@ -1,7 +1,7 @@
 """User profile service for managing user profiles and feature flags."""
 
 import os
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 from datetime import datetime
 import boto3
 from botocore.exceptions import ClientError
@@ -29,18 +29,36 @@ def get_default_feature_flags(role: str = "user") -> Dict[str, bool]:
     if role == "admin":
         return {
             "canCreateBets": True,
-            "canManageBets": True,
+            "canManageBets": True,  # Kept for backward compatibility
             "canDeleteBets": True,
             "canClearWeek": True,
             "canBetslipImport": True,
+            # New granular permissions
+            "seeManageBetsPage": True,
+            "seeManageBetsPageOwn": False,
+            "canEditBets": True,
+            "canEditBetsOwn": False,
+            "canMarkBetFeatures": True,
+            "canMarkBetFeaturesOwn": False,
+            "canMarkBetWinLoss": True,
+            "canMarkBetWinLossOwn": False,
         }
     else:  # user role
         return {
             "canCreateBets": True,
-            "canManageBets": False,
+            "canManageBets": False,  # Kept for backward compatibility
             "canDeleteBets": False,
             "canClearWeek": False,
             "canBetslipImport": False,
+            # New granular permissions (all false by default)
+            "seeManageBetsPage": False,
+            "seeManageBetsPageOwn": False,
+            "canEditBets": False,
+            "canEditBetsOwn": False,
+            "canMarkBetFeatures": False,
+            "canMarkBetFeaturesOwn": False,
+            "canMarkBetWinLoss": False,
+            "canMarkBetWinLossOwn": False,
         }
 
 
@@ -91,6 +109,7 @@ def create_user_profile(user_id: str, email: str, role: str = "user") -> Dict[st
         "email": email,
         "role": role,
         "featureFlags": feature_flags,
+        "aliases": [],  # Default to empty list
         "createdAt": now,
         "updatedAt": now,
     }
@@ -145,6 +164,11 @@ def update_user_profile(user_id: str, updates: Dict[str, Any]) -> Optional[Dict[
             update_expression_parts.append("#featureFlags = :featureFlags")
             expression_attribute_names["#featureFlags"] = "featureFlags"
             expression_attribute_values[":featureFlags"] = value
+        elif key == "aliases":
+            # Handle aliases update (list of strings)
+            update_expression_parts.append("#aliases = :aliases")
+            expression_attribute_names["#aliases"] = "aliases"
+            expression_attribute_values[":aliases"] = value
         elif key == "role":
             # When role changes, update feature flags to defaults for that role
             update_expression_parts.append("#role = :role")
@@ -232,4 +256,25 @@ def is_admin(user_id: str) -> bool:
         True if user is admin, False otherwise
     """
     return get_user_role(user_id) == "admin"
+
+
+def get_user_aliases(user_id: str) -> List[str]:
+    """
+    Get user's aliases list.
+    
+    Args:
+        user_id: Cognito user ID
+    
+    Returns:
+        List of user aliases (empty list if not found or not set)
+    """
+    profile = get_user_profile(user_id)
+    if not profile:
+        return []
+    
+    aliases = profile.get("aliases", [])
+    if not isinstance(aliases, list):
+        return []
+    
+    return aliases
 

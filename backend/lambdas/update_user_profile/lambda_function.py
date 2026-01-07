@@ -32,10 +32,6 @@ def lambda_handler(event, context):
         if not user_id:
             return error_response("Unauthorized", 401, "UNAUTHORIZED")
         
-        # Check if user is admin
-        if not is_admin(user_id):
-            return error_response("Forbidden: Admin access required", 403, "FORBIDDEN")
-        
         # Parse request body
         try:
             body = json.loads(event.get("body", "{}"))
@@ -45,11 +41,44 @@ def lambda_handler(event, context):
         # Get target user ID (defaults to self)
         target_user_id = body.get("userId", user_id)
         
+        # Check permissions:
+        # - Admins can update any user's profile
+        # - Regular users can only update their own profile, and only certain fields (aliases)
+        is_user_admin = is_admin(user_id)
+        is_updating_self = (target_user_id == user_id)
+        
+        if not is_user_admin:
+            # Regular users can only update themselves
+            if not is_updating_self:
+                return error_response("Forbidden: You can only update your own profile", 403, "FORBIDDEN")
+            
+            # Regular users can only update aliases
+            allowed_fields = {"aliases"}
+            updates = {k: v for k, v in body.items() if k != "userId"}
+            restricted_fields = set(updates.keys()) - allowed_fields
+            
+            if restricted_fields:
+                return error_response(
+                    f"Forbidden: Regular users can only update aliases. Cannot update: {', '.join(restricted_fields)}",
+                    403,
+                    "FORBIDDEN"
+                )
+        
         # Extract updates (exclude userId from updates)
         updates = {k: v for k, v in body.items() if k != "userId"}
         
         if not updates:
             return error_response("No updates provided", 400, "VALIDATION_ERROR")
+        
+        # Validate aliases if provided
+        if "aliases" in updates:
+            aliases = updates["aliases"]
+            if not isinstance(aliases, list):
+                return error_response("Aliases must be a list", 400, "VALIDATION_ERROR")
+            # Validate each alias is a string
+            for alias in aliases:
+                if not isinstance(alias, str) or not alias.strip():
+                    return error_response("All aliases must be non-empty strings", 400, "VALIDATION_ERROR")
         
         # Update user profile
         updated_profile = update_user_profile(target_user_id, updates)
