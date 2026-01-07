@@ -67,6 +67,9 @@ def lambda_handler(event, context):
             
             if not has_global_permission:
                 # User has "Own" permission - filter bets
+                # First, ensure bets belong to this user (defensive check)
+                bets = [bet for bet in bets if bet.get("userId") == user_id]
+                # Then filter by attribution visibility
                 user_aliases = _get_user_aliases(user_id)
                 bets = [bet for bet in bets if _is_bet_visible_to_user(bet, user_aliases)]
         else:
