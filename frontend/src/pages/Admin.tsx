@@ -6,15 +6,25 @@ import { ParlayForm } from '../components/admin/ParlayForm';
 import { BetList } from '../components/admin/BetList';
 import { ClearWeekButton } from '../components/admin/ClearWeekButton';
 import { BetSlipImport } from '../components/admin/BetSlipImport';
+import { LoadingSpinner } from '../components/shared/LoadingSpinner';
 import { useNavigate } from 'react-router-dom';
 
 export const Admin: React.FC = () => {
   const { logout, user } = useAuth();
-  const { hasFeatureFlag, canSeeManageBetsPage, isAdmin } = useUserProfile();
+  const { hasFeatureFlag, canSeeManageBetsPage, isAdmin, loading } = useUserProfile();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'add' | 'manage'>('add');
   const [betType, setBetType] = useState<'single' | 'parlay'>('single');
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+  // Show loading screen while profile is loading
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+        <LoadingSpinner />
+      </div>
+    );
+  }
 
   const canCreateBets = hasFeatureFlag('canCreateBets');
   const canSeeManagePage = canSeeManageBetsPage();

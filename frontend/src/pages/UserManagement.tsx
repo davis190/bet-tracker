@@ -7,7 +7,7 @@ import { LoadingSpinner } from '../components/shared/LoadingSpinner';
 
 export const UserManagement: React.FC = () => {
   const { logout, user } = useAuth();
-  const { userProfile, isAdmin } = useUserProfile();
+  const { userProfile, isAdmin, loading: profileLoading } = useUserProfile();
   const navigate = useNavigate();
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
@@ -15,6 +15,15 @@ export const UserManagement: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [editingUser, setEditingUser] = useState<string | null>(null);
   const [editedUser, setEditedUser] = useState<Partial<UserProfile> | null>(null);
+
+  // Show loading screen while profile is loading
+  if (profileLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+        <LoadingSpinner />
+      </div>
+    );
+  }
 
   useEffect(() => {
     if (!isAdmin) {
