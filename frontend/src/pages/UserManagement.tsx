@@ -7,7 +7,7 @@ import { LoadingSpinner } from '../components/shared/LoadingSpinner';
 
 export const UserManagement: React.FC = () => {
   const { logout, user } = useAuth();
-  const { userProfile, isAdmin, refreshProfile } = useUserProfile();
+  const { userProfile, isAdmin } = useUserProfile();
   const navigate = useNavigate();
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
@@ -29,7 +29,27 @@ export const UserManagement: React.FC = () => {
       setLoading(true);
       setError(null);
       const usersList = await apiClient.listUsers();
-      setUsers(usersList);
+      // Normalize users to ensure all feature flags are present with defaults
+      const normalizedUsers: UserProfile[] = usersList.map((user) => ({
+        ...user,
+        featureFlags: {
+          canCreateBets: user.featureFlags.canCreateBets ?? false,
+          canManageBets: user.featureFlags.canManageBets ?? false,
+          canDeleteBets: user.featureFlags.canDeleteBets ?? false,
+          canClearWeek: user.featureFlags.canClearWeek ?? false,
+          canBetslipImport: user.featureFlags.canBetslipImport ?? false,
+          seeManageBetsPage: user.featureFlags.seeManageBetsPage ?? false,
+          seeManageBetsPageOwn: user.featureFlags.seeManageBetsPageOwn ?? false,
+          canEditBets: user.featureFlags.canEditBets ?? false,
+          canEditBetsOwn: user.featureFlags.canEditBetsOwn ?? false,
+          canMarkBetFeatures: user.featureFlags.canMarkBetFeatures ?? false,
+          canMarkBetFeaturesOwn: user.featureFlags.canMarkBetFeaturesOwn ?? false,
+          canMarkBetWinLoss: user.featureFlags.canMarkBetWinLoss ?? false,
+          canMarkBetWinLossOwn: user.featureFlags.canMarkBetWinLossOwn ?? false,
+        },
+        aliases: user.aliases ?? [],
+      }));
+      setUsers(normalizedUsers);
     } catch (err: any) {
       console.error('Failed to load users:', err);
       setError(err.response?.data?.message || 'Failed to load users');
