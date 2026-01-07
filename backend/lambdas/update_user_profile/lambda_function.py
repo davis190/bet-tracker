@@ -30,19 +30,27 @@ def lambda_handler(event, context):
         return options_response()
     
     try:
+        print(f"update_user_profile lambda_handler: Starting request")
+        print(f"Event: {json.dumps(event, default=str)}")
+        
         # Get user ID from event
         user_id = get_user_id_from_event(event)
+        print(f"update_user_profile: user_id from event = {user_id}")
         if not user_id:
+            print("update_user_profile: No user_id found in event")
             return error_response("Unauthorized", 401, "UNAUTHORIZED")
         
         # Parse request body
         try:
             body = json.loads(event.get("body", "{}"))
-        except json.JSONDecodeError:
+            print(f"update_user_profile: Parsed request body: {json.dumps(body, default=str)}")
+        except json.JSONDecodeError as e:
+            print(f"update_user_profile: JSON decode error: {str(e)}")
             return error_response("Invalid JSON in request body", 400, "INVALID_JSON")
         
         # Get target user ID (defaults to self)
         target_user_id = body.get("userId", user_id)
+        print(f"update_user_profile: target_user_id = {target_user_id}, is_admin check for {user_id}")
         
         # Check permissions:
         # - Admins can update any user's profile (including aliases)
@@ -55,7 +63,9 @@ def lambda_handler(event, context):
             return error_response("Forbidden: Only administrators can update user profiles", 403, "FORBIDDEN")
         
         # Check if target user profile exists, create if it doesn't
+        print(f"update_user_profile: Checking if profile exists for user_id={target_user_id}")
         target_profile = get_user_profile(target_user_id)
+        print(f"update_user_profile: Profile exists: {target_profile is not None}")
         if not target_profile:
             # Profile doesn't exist, create it first
             # Try to get email from request body or from current user's event
@@ -115,13 +125,17 @@ def lambda_handler(event, context):
             default_role = body.get("role", "user")
             
             # Create the profile with defaults
+            print(f"update_user_profile: Creating profile for user_id={target_user_id}, email={target_email}, role={default_role}")
             target_profile = create_user_profile(target_user_id, target_email, role=default_role)
+            print(f"update_user_profile: Profile created: {target_profile is not None}")
         
         # Extract updates (exclude userId and email from updates)
         updates = {k: v for k, v in body.items() if k not in ["userId", "email"]}
+        print(f"update_user_profile: Updates to apply: {json.dumps(updates, default=str)}")
         
         if not updates:
             # No updates to make (or only userId/email were provided)
+            print("update_user_profile: No updates to make, returning existing profile")
             return success_response(target_profile)
         
         # Validate aliases if provided
@@ -135,14 +149,30 @@ def lambda_handler(event, context):
                     return error_response("All aliases must be non-empty strings", 400, "VALIDATION_ERROR")
         
         # Update user profile
-        updated_profile = update_user_profile(target_user_id, updates)
-        
-        if not updated_profile:
-            return error_response("Failed to update user profile", 500, "UPDATE_FAILED")
-        
-        return success_response(updated_profile)
+        print(f"update_user_profile: Calling update_user_profile with user_id={target_user_id}, updates={json.dumps(updates, default=str)}")
+        try:
+            updated_profile = update_user_profile(target_user_id, updates)
+            print(f"update_user_profile: update_user_profile returned: {updated_profile is not None}")
+            
+            if not updated_profile:
+                print(f"update_user_profile: ERROR - update_user_profile returned None for user_id={target_user_id}")
+                return error_response("Failed to update user profile - update returned None", 500, "UPDATE_FAILED")
+            
+            print(f"update_user_profile: Successfully updated profile for user_id={target_user_id}")
+            return success_response(updated_profile)
+        except Exception as update_error:
+            print(f"update_user_profile: Exception during update_user_profile call: {type(update_error).__name__}: {str(update_error)}")
+            import traceback
+            print(f"update_user_profile: Traceback: {traceback.format_exc()}")
+            return error_response(
+                f"Failed to update user profile: {type(update_error).__name__}: {str(update_error)}",
+                500,
+                "UPDATE_FAILED"
+            )
     
     except Exception as e:
-        print(f"Error: {str(e)}")
-        return error_response(f"Internal server error: {str(e)}", 500, "INTERNAL_ERROR")
+        print(f"update_user_profile: Unhandled exception: {type(e).__name__}: {str(e)}")
+        import traceback
+        print(f"update_user_profile: Traceback: {traceback.format_exc()}")
+        return error_response(f"Internal server error: {type(e).__name__}: {str(e)}", 500, "INTERNAL_ERROR")
 

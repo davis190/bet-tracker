@@ -196,7 +196,12 @@ def update_user_profile(user_id: str, updates: Dict[str, Any]) -> Optional[Dict[
     update_expression = "SET " + ", ".join(update_expression_parts)
     
     try:
-        table.update_item(
+        print(f"update_user_profile: Updating DynamoDB item for user_id={user_id}")
+        print(f"update_user_profile: UpdateExpression={update_expression}")
+        print(f"update_user_profile: ExpressionAttributeNames={expression_attribute_names}")
+        print(f"update_user_profile: ExpressionAttributeValues={expression_attribute_values}")
+        
+        response = table.update_item(
             Key={"userId": user_id},
             UpdateExpression=update_expression,
             ExpressionAttributeNames=expression_attribute_names,
@@ -204,8 +209,23 @@ def update_user_profile(user_id: str, updates: Dict[str, Any]) -> Optional[Dict[
             ReturnValues="ALL_NEW",
         )
         
-        return get_user_profile(user_id)
-    except ClientError:
+        print(f"update_user_profile: DynamoDB update_item succeeded, response keys: {list(response.keys())}")
+        
+        updated_profile = get_user_profile(user_id)
+        print(f"update_user_profile: Retrieved updated profile: {updated_profile is not None}")
+        return updated_profile
+    except ClientError as e:
+        error_code = e.response.get("Error", {}).get("Code", "Unknown")
+        error_message = e.response.get("Error", {}).get("Message", str(e))
+        print(f"update_user_profile: DynamoDB ClientError - Code: {error_code}, Message: {error_message}")
+        print(f"update_user_profile: Full error response: {e.response}")
+        import traceback
+        print(f"update_user_profile: Traceback: {traceback.format_exc()}")
+        return None
+    except Exception as e:
+        print(f"update_user_profile: Unexpected exception: {type(e).__name__}: {str(e)}")
+        import traceback
+        print(f"update_user_profile: Traceback: {traceback.format_exc()}")
         return None
 
 
