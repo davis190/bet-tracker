@@ -58,7 +58,28 @@ export const UserProfileProvider: React.FC<{ children: ReactNode }> = ({ childre
   const fetchProfile = async () => {
     try {
       const profile = await apiClient.getUserProfile();
-      setUserProfile(profile);
+      // Normalize profile to ensure all feature flags are present with defaults
+      const normalizedProfile: UserProfile = {
+        ...profile,
+        featureFlags: {
+          canCreateBets: profile.featureFlags.canCreateBets ?? false,
+          canManageBets: profile.featureFlags.canManageBets ?? false,
+          canDeleteBets: profile.featureFlags.canDeleteBets ?? false,
+          canClearWeek: profile.featureFlags.canClearWeek ?? false,
+          canBetslipImport: profile.featureFlags.canBetslipImport ?? false,
+          // New granular permissions with defaults
+          seeManageBetsPage: profile.featureFlags.seeManageBetsPage ?? false,
+          seeManageBetsPageOwn: profile.featureFlags.seeManageBetsPageOwn ?? false,
+          canEditBets: profile.featureFlags.canEditBets ?? false,
+          canEditBetsOwn: profile.featureFlags.canEditBetsOwn ?? false,
+          canMarkBetFeatures: profile.featureFlags.canMarkBetFeatures ?? false,
+          canMarkBetFeaturesOwn: profile.featureFlags.canMarkBetFeaturesOwn ?? false,
+          canMarkBetWinLoss: profile.featureFlags.canMarkBetWinLoss ?? false,
+          canMarkBetWinLossOwn: profile.featureFlags.canMarkBetWinLossOwn ?? false,
+        },
+        aliases: profile.aliases ?? [],
+      };
+      setUserProfile(normalizedProfile);
     } catch (err) {
       console.error('Failed to fetch user profile:', err);
       setUserProfile(null);

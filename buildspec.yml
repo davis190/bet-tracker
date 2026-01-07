@@ -133,8 +133,8 @@ phases:
         echo "SAM build completed successfully"
         echo "Checking build output directory..."
         if [ -d ".aws-sam/build" ]; then
-          echo "Build directory exists. Full contents:"
-          ls -laR .aws-sam/build/ || echo "Cannot list build directory"
+          # echo "Build directory exists. Full contents:"
+          # ls -laR .aws-sam/build/ || echo "Cannot list build directory"
           echo "Searching for YAML files:"
           find .aws-sam/build -name "*.yaml" -type f || echo "No YAML files found"
           echo "Searching for any files:"
