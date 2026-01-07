@@ -33,6 +33,8 @@ def lambda_handler(event, context):
     try:
         # Get user ID from event (may be None for public access)
         user_id = get_user_id_from_event(event)
+        print(f"DEBUG: Extracted user_id: {user_id}")
+        print(f"DEBUG: Authorizer claims: {event.get('requestContext', {}).get('authorizer', {}).get('claims', {})}")
         
         # Get query parameters
         query_params = event.get("queryStringParameters") or {}
@@ -43,6 +45,7 @@ def lambda_handler(event, context):
         
         # If authenticated, check permissions and get bets
         if user_id:
+            print(f"DEBUG: User is authenticated, checking permissions...")
             # Check if user can see manage bets page
             can_see = check_can_see_manage_bets_page(user_id)
             if not can_see:
@@ -89,12 +92,14 @@ def lambda_handler(event, context):
                 print(f"DEBUG: After attribution filter: {len(bets)} bets remaining (was {bets_before_attribution_filter})")
         else:
             # Public access - get all bets
+            print(f"DEBUG: No user_id found, using public access")
             bets = get_all_bets(
                 status=status,
                 start_date=start_date,
                 end_date=end_date,
                 bet_type=bet_type,
             )
+            print(f"DEBUG: Public access retrieved {len(bets)} bets")
         
         return success_response({"bets": bets})
     

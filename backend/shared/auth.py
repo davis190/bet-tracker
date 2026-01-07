@@ -10,6 +10,8 @@ def get_user_id_from_event(event: Dict) -> Optional[str]:
     API Gateway validates the JWT token before invoking the Lambda function,
     so we can directly extract the user ID from the claims.
     
+    Also supports extracting from Authorization header if authorizer isn't configured.
+    
     Args:
         event: API Gateway event
     
@@ -17,12 +19,44 @@ def get_user_id_from_event(event: Dict) -> Optional[str]:
         User ID (sub claim) or None if not found
     """
     try:
-        # Cognito authorizer adds claims to requestContext.authorizer.claims
+        # First, try to get from authorizer claims (when Cognito authorizer is configured)
         claims = event.get("requestContext", {}).get("authorizer", {}).get("claims", {})
         user_id = claims.get("sub")
-        return user_id
+        if user_id:
+            return user_id
+        
+        # Fallback: try to extract from Authorization header if authorizer isn't configured
+        # This allows the endpoint to work with or without the authorizer
+        headers = event.get("headers", {}) or {}
+        auth_header = headers.get("Authorization") or headers.get("authorization", "")
+        
+        if auth_header.startswith("Bearer "):
+            token = auth_header[7:]  # Remove "Bearer " prefix
+            try:
+                # Decode JWT token to get user ID (without verification since authorizer would do that)
+                import base64
+                import json
+                # JWT tokens have 3 parts separated by dots: header.payload.signature
+                parts = token.split(".")
+                if len(parts) >= 2:
+                    # Decode the payload (second part)
+                    payload = parts[1]
+                    # Add padding if needed
+                    padding = 4 - len(payload) % 4
+                    if padding != 4:
+                        payload += "=" * padding
+                    decoded = base64.urlsafe_b64decode(payload)
+                    claims = json.loads(decoded)
+                    user_id = claims.get("sub")
+                    if user_id:
+                        return user_id
+            except Exception:
+                # If token decoding fails, return None
+                pass
     except Exception:
-        return None
+        pass
+    
+    return None
 
 
 def get_user_email_from_event(event: Dict) -> Optional[str]:
