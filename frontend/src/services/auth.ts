@@ -176,7 +176,9 @@ export const authService = {
       // Filter out immutable attributes that cannot be modified
       const mutableAttributes: any = {};
       const immutableAttributes = [
+        'email',
         'email_verified',
+        'phone_number',
         'phone_number_verified',
         'sub',
         'cognito:user_status',
