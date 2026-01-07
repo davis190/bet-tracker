@@ -173,7 +173,27 @@ export const authService = {
       const cognitoUser = pendingPasswordResetUser.cognitoUser;
       const userAttributes = pendingPasswordResetUser.userAttributes;
 
-      cognitoUser.completeNewPasswordChallenge(newPassword, userAttributes, {
+      // Filter out immutable attributes that cannot be modified
+      const mutableAttributes: any = {};
+      const immutableAttributes = [
+        'email_verified',
+        'phone_number_verified',
+        'sub',
+        'cognito:user_status',
+        'cognito:mfa_enabled',
+      ];
+
+      if (userAttributes) {
+        Object.keys(userAttributes).forEach((key) => {
+          // Only include attributes that are not in the immutable list
+          // and don't start with 'cognito:' (system-managed attributes)
+          if (!immutableAttributes.includes(key) && !key.startsWith('cognito:')) {
+            mutableAttributes[key] = userAttributes[key];
+          }
+        });
+      }
+
+      cognitoUser.completeNewPasswordChallenge(newPassword, mutableAttributes, {
         onSuccess: (result: CognitoUserSession) => {
           // Clear the pending password reset user
           pendingPasswordResetUser = null;
