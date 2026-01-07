@@ -897,6 +897,12 @@ Resources:
             method.response.header.Access-Control-Allow-Headers: true
             method.response.header.Access-Control-Allow-Methods: true
             method.response.header.Access-Control-Allow-Credentials: true
+        - StatusCode: 404
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: true
+            method.response.header.Access-Control-Allow-Headers: true
+            method.response.header.Access-Control-Allow-Methods: true
+            method.response.header.Access-Control-Allow-Credentials: true
         - StatusCode: 500
           ResponseParameters:
             method.response.header.Access-Control-Allow-Origin: true
@@ -1147,7 +1153,7 @@ Resources:
     Properties:
       RestApiId: !Ref ApiGatewayId
       StageName: !Ref Environment
-      Description: !Sub 'Deployment - OPTIONS methods use MOCK integration for CORS - v4'
+      Description: !Sub 'Deployment - OPTIONS methods use MOCK integration for CORS - v5 - Added PUT /users/profile'
 
 Outputs:
   ApiGatewayUrl:
