@@ -68,7 +68,7 @@ def lambda_handler(event, context):
                     bet_type=bet_type,
                 )
             else:
-                # User has "Own" permission - get all bets and filter by userId and attribution
+                # User has "Own" permission - get all bets and filter by userId OR attribution
                 bets = get_all_bets(
                     status=status,
                     start_date=start_date,
@@ -76,20 +76,28 @@ def lambda_handler(event, context):
                     bet_type=bet_type,
                 )
                 print(f"DEBUG: User {user_id} has 'Own' permission. Retrieved {len(bets)} bets before filtering.")
-                # Filter to only bets that belong to this user (by userId)
-                bets_before_user_filter = len(bets)
                 # Debug: show userIds of first few bets
                 if bets:
                     sample_user_ids = [bet.get("userId") for bet in bets[:5]]
                     print(f"DEBUG: Sample bet userIds: {sample_user_ids}")
-                bets = [bet for bet in bets if bet.get("userId") == user_id]
-                print(f"DEBUG: After userId filter ({user_id}): {len(bets)} bets remaining (was {bets_before_user_filter})")
-                # Then filter by attribution visibility
+                
+                # Get user aliases for attribution filtering
                 user_aliases = _get_user_aliases(user_id)
                 print(f"DEBUG: User aliases: {user_aliases}")
-                bets_before_attribution_filter = len(bets)
-                bets = [bet for bet in bets if _is_bet_visible_to_user(bet, user_aliases)]
-                print(f"DEBUG: After attribution filter: {len(bets)} bets remaining (was {bets_before_attribution_filter})")
+                
+                # Filter to bets where: (userId matches) OR (bet is attributed to user)
+                bets_before_filter = len(bets)
+                filtered_bets = []
+                for bet in bets:
+                    # Check if bet belongs to this user by userId
+                    if bet.get("userId") == user_id:
+                        filtered_bets.append(bet)
+                    # OR check if bet is attributed to this user
+                    elif _is_bet_visible_to_user(bet, user_aliases):
+                        filtered_bets.append(bet)
+                
+                bets = filtered_bets
+                print(f"DEBUG: After filtering (userId={user_id} OR attributedTo in {user_aliases}): {len(bets)} bets remaining (was {bets_before_filter})")
         else:
             # Public access - get all bets
             print(f"DEBUG: No user_id found, using public access")
