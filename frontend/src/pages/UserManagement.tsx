@@ -135,8 +135,8 @@ export const UserManagement: React.FC = () => {
         updates.featureFlags = editedUser.featureFlags;
       }
 
-      // Only allow editing aliases if not editing own profile
-      if (editedUser.aliases !== undefined && userId !== userProfile?.userId) {
+      // Allow editing aliases (admins can edit their own aliases)
+      if (editedUser.aliases !== undefined) {
         updates.aliases = editedUser.aliases;
       }
 
@@ -405,30 +405,21 @@ export const UserManagement: React.FC = () => {
                                   className="inline-flex items-center px-2 py-1 rounded text-xs bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200"
                                 >
                                   {alias}
-                                  {!isCurrentUser && (
-                                    <button
-                                      onClick={() => handleRemoveAlias(alias)}
-                                      className="ml-1 text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300"
-                                    >
-                                      ×
-                                    </button>
-                                  )}
+                                  <button
+                                    onClick={() => handleRemoveAlias(alias)}
+                                    className="ml-1 text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300"
+                                  >
+                                    ×
+                                  </button>
                                 </span>
                               ))}
                             </div>
-                            {!isCurrentUser && (
-                              <button
-                                onClick={handleAddAlias}
-                                className="text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300"
-                              >
-                                + Add Alias
-                              </button>
-                            )}
-                            {isCurrentUser && (
-                              <p className="text-xs text-gray-500 dark:text-gray-400 italic">
-                                You cannot edit your own aliases
-                              </p>
-                            )}
+                            <button
+                              onClick={handleAddAlias}
+                              className="text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300"
+                            >
+                              + Add Alias
+                            </button>
                           </div>
                         ) : (
                           <div className="flex flex-wrap gap-2">
