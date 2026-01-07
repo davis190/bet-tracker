@@ -10,9 +10,12 @@ shared_path = os.path.join(os.path.dirname(__file__), '..', '..', 'shared')
 if os.path.exists(shared_path):
     sys.path.insert(0, shared_path)
 
+import boto3
+from botocore.exceptions import ClientError
+
 from shared.responses import success_response, error_response, options_response
-from shared.auth import get_user_id_from_event
-from shared.user_service import update_user_profile, is_admin
+from shared.auth import get_user_id_from_event, get_user_email_from_event
+from shared.user_service import update_user_profile, is_admin, get_user_profile, create_user_profile
 
 
 def lambda_handler(event, context):
@@ -51,11 +54,75 @@ def lambda_handler(event, context):
             # Regular users cannot update anything, including their own aliases
             return error_response("Forbidden: Only administrators can update user profiles", 403, "FORBIDDEN")
         
-        # Extract updates (exclude userId from updates)
-        updates = {k: v for k, v in body.items() if k != "userId"}
+        # Check if target user profile exists, create if it doesn't
+        target_profile = get_user_profile(target_user_id)
+        if not target_profile:
+            # Profile doesn't exist, create it first
+            # Try to get email from request body or from current user's event
+            target_email = body.get("email")
+            if not target_email and is_updating_self:
+                # If updating self and no email in body, try to get from event
+                target_email = get_user_email_from_event(event)
+            
+            # If still no email, try to fetch from Cognito
+            if not target_email:
+                try:
+                    user_pool_id = os.environ.get("COGNITO_USER_POOL_ID")
+                    if user_pool_id:
+                        cognito_client = boto3.client("cognito-idp")
+                        # Try to find user by sub (user ID)
+                        # Since usernameAttributes is email, we need to list users and filter
+                        try:
+                            # First, try admin_get_user with the user_id (sub) - this might work
+                            response = cognito_client.admin_get_user(
+                                UserPoolId=user_pool_id,
+                                Username=target_user_id
+                            )
+                            # Extract email from attributes
+                            for attr in response.get("UserAttributes", []):
+                                if attr.get("Name") == "email":
+                                    target_email = attr.get("Value")
+                                    break
+                        except ClientError:
+                            # If that fails, try listing users with filter
+                            # Note: This requires pagination for large user pools
+                            paginator = cognito_client.get_paginator('list_users')
+                            for page in paginator.paginate(
+                                UserPoolId=user_pool_id,
+                                Filter=f'sub = "{target_user_id}"'
+                            ):
+                                for user in page.get("Users", []):
+                                    for attr in user.get("Attributes", []):
+                                        if attr.get("Name") == "email":
+                                            target_email = attr.get("Value")
+                                            break
+                                    if target_email:
+                                        break
+                                if target_email:
+                                    break
+                except (ClientError, Exception) as e:
+                    print(f"Could not fetch email from Cognito: {str(e)}")
+                    # Continue - will return error if email still not found
+            
+            if not target_email:
+                return error_response(
+                    "User profile not found and email is required to create it. Please provide email in request body.",
+                    400,
+                    "EMAIL_REQUIRED"
+                )
+            
+            # Get role from body or default to "user"
+            default_role = body.get("role", "user")
+            
+            # Create the profile with defaults
+            target_profile = create_user_profile(target_user_id, target_email, role=default_role)
+        
+        # Extract updates (exclude userId and email from updates)
+        updates = {k: v for k, v in body.items() if k not in ["userId", "email"]}
         
         if not updates:
-            return error_response("No updates provided", 400, "VALIDATION_ERROR")
+            # No updates to make (or only userId/email were provided)
+            return success_response(target_profile)
         
         # Validate aliases if provided
         if "aliases" in updates:
@@ -71,7 +138,7 @@ def lambda_handler(event, context):
         updated_profile = update_user_profile(target_user_id, updates)
         
         if not updated_profile:
-            return error_response("User profile not found", 404, "NOT_FOUND")
+            return error_response("Failed to update user profile", 500, "UPDATE_FAILED")
         
         return success_response(updated_profile)
     
