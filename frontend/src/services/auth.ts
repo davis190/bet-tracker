@@ -16,6 +16,9 @@ const poolData = {
 
 const userPool = new CognitoUserPool(poolData);
 
+// Store the cognitoUser instance when newPasswordRequired is triggered
+let pendingPasswordResetUser: { cognitoUser: CognitoUser; email: string; userAttributes: any } | null = null;
+
 export interface AuthUser {
   username: string;
   email: string;
@@ -43,6 +46,8 @@ export const authService = {
 
       cognitoUser.authenticateUser(authenticationDetails, {
         onSuccess: (result: CognitoUserSession) => {
+          // Clear any pending password reset user on successful login
+          pendingPasswordResetUser = null;
           const idToken = result.getIdToken();
           const payload = idToken.payload;
           
@@ -60,10 +65,12 @@ export const authService = {
           });
         },
         onFailure: (err: Error) => {
+          pendingPasswordResetUser = null;
           reject(err);
         },
-        newPasswordRequired: (_userAttributes: any, _requiredAttributes: any) => {
-          // This will be handled by handleNewPasswordRequired
+        newPasswordRequired: (userAttributes: any, requiredAttributes: any) => {
+          // Store the cognitoUser instance and attributes so we can use them later
+          pendingPasswordResetUser = { cognitoUser, email, userAttributes: userAttributes || {} };
           reject(new Error('NEW_PASSWORD_REQUIRED'));
         },
       });
@@ -157,13 +164,19 @@ export const authService = {
 
   async handleNewPasswordRequired(email: string, newPassword: string): Promise<{ user: AuthUser; tokens: AuthTokens }> {
     return new Promise((resolve, reject) => {
-      const cognitoUser = new CognitoUser({
-        Username: email,
-        Pool: userPool,
-      });
+      // Use the stored cognitoUser instance from the login attempt
+      if (!pendingPasswordResetUser || pendingPasswordResetUser.email !== email) {
+        reject(new Error('No pending password reset found. Please try logging in again.'));
+        return;
+      }
 
-      cognitoUser.completeNewPasswordChallenge(newPassword, {}, {
+      const cognitoUser = pendingPasswordResetUser.cognitoUser;
+      const userAttributes = pendingPasswordResetUser.userAttributes;
+
+      cognitoUser.completeNewPasswordChallenge(newPassword, userAttributes, {
         onSuccess: (result: CognitoUserSession) => {
+          // Clear the pending password reset user
+          pendingPasswordResetUser = null;
           const idToken = result.getIdToken();
           const payload = idToken.payload;
           
@@ -181,6 +194,7 @@ export const authService = {
           });
         },
         onFailure: (err: Error) => {
+          pendingPasswordResetUser = null;
           reject(err);
         },
       });
