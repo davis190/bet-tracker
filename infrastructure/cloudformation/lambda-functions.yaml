@@ -189,6 +189,7 @@ Resources:
       Environment:
         Variables:
           BETS_TABLE_NAME: !Ref BetsTableName
+          USERS_TABLE_NAME: !Ref UsersTableName
           COGNITO_USER_POOL_ID: !Ref UserPoolId
       Policies:
         - AWSLambdaBasicExecutionRole
