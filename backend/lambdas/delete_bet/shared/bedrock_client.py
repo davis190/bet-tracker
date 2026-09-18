@@ -218,7 +218,6 @@ def analyze_betslip_image(image_bytes: bytes) -> str:
             inferenceConfig={
                 'maxTokens': 4096,
                 'temperature': 0.0,
-                'topP': 0.9,
             },
         )
         logger.info("Bedrock converse API call succeeded")
