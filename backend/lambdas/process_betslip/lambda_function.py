@@ -112,6 +112,7 @@ def lambda_handler(event, context):
             bets, warnings = parse_bets_from_model_output(raw_output)
         except BetSlipParserError as exc:
             print(f"Parser error: {exc}")
+            print(f"Raw model output (first 500 chars): {raw_output[:500]!r}")
             return error_response(
                 "Could not confidently parse this bet slip", 422, "PARSER_ERROR"
             )

@@ -1,6 +1,7 @@
 """Utilities for parsing and validating bet data from Bedrock model output."""
 
 import json
+import re
 import uuid
 from typing import Any, Dict, List, Tuple, Optional
 from collections import defaultdict
@@ -10,6 +11,26 @@ from .bet_validator import validate_single_bet, validate_parlay, reverse_calcula
 
 class BetSlipParserError(Exception):
     """Raised when the bet slip output cannot be parsed or validated."""
+
+
+_CODE_FENCE_RE = re.compile(r"^```(?:json)?\s*\n?(.*?)\n?```$", re.DOTALL)
+
+
+def _extract_json_payload(model_output: str) -> str:
+    """
+    Strip common non-JSON wrapping from model output before parsing.
+
+    Some models (notably Claude) wrap JSON in a markdown code fence despite
+    being told to return raw JSON only. Strip that, and fall back to slicing
+    out the outermost {...} object if there's still stray text around it.
+    """
+    text = model_output.strip()
+
+    fence_match = _CODE_FENCE_RE.match(text)
+    if fence_match:
+        text = fence_match.group(1).strip()
+
+    return text
 
 
 def _normalize_single_bet(raw: Dict[str, Any], validate: bool = True) -> Tuple[Dict[str, Any], Optional[str]]:
@@ -232,10 +253,19 @@ def parse_bets_from_model_output(
     Returns a tuple of (valid_bets, warnings).
     Raises BetSlipParserError if the JSON is malformed or completely unusable.
     """
+    payload = _extract_json_payload(model_output)
     try:
-        data = json.loads(model_output)
+        data = json.loads(payload)
     except json.JSONDecodeError as exc:
-        raise BetSlipParserError(f"Model output is not valid JSON: {exc}") from exc
+        # Fall back to the outermost {...} in case there's stray prose around the JSON
+        start = payload.find("{")
+        end = payload.rfind("}")
+        if start == -1 or end == -1 or end <= start:
+            raise BetSlipParserError(f"Model output is not valid JSON: {exc}") from exc
+        try:
+            data = json.loads(payload[start : end + 1])
+        except json.JSONDecodeError:
+            raise BetSlipParserError(f"Model output is not valid JSON: {exc}") from exc
 
     if not isinstance(data, dict):
         raise BetSlipParserError("Model output must be a JSON object")
