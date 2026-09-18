@@ -226,7 +226,7 @@ Resources:
           BETS_TABLE_NAME: !Ref BetsTableName
           USERS_TABLE_NAME: !Ref UsersTableName
           COGNITO_USER_POOL_ID: !Ref UserPoolId
-          BEDROCK_MODEL_ID: 'amazon.nova-pro-v1:0'
+          BEDROCK_MODEL_ID: 'global.anthropic.claude-sonnet-4-6'
       Policies:
         - AWSLambdaBasicExecutionRole
         - Version: '2012-10-17'

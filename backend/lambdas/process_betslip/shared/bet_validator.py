@@ -274,3 +274,4 @@ def validate_bet(data: Dict[str, Any]) -> Tuple[bool, Optional[str]]:
         return validate_parlay(data)
     else:
         return False, "Type must be 'single' or 'parlay'"
+

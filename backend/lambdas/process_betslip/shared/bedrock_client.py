@@ -224,9 +224,8 @@ def analyze_betslip_image(image_bytes: bytes) -> str:
         logger.info("Bedrock converse API call succeeded")
     except Exception as e:
         logger.error(f"Bedrock converse API call failed: {type(e).__name__}: {str(e)}")
-        logger.error(f"Request details: model={model_id}, format={image_format}, base64_len={len(image_b64)}")
+        logger.error(f"Request details: model={model_id}, format={image_format}, image_bytes_len={len(image_bytes)}")
         logger.error(f"Image bytes first 100 hex: {image_bytes[:100].hex()}")
-        logger.error(f"Base64 first 100 chars: {image_b64[:100] if len(image_b64) >= 100 else image_b64}")
         # Log the full exception for debugging
         import traceback
         logger.error(f"Full traceback: {traceback.format_exc()}")
